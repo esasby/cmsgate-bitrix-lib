@@ -152,7 +152,7 @@ class OrderWrapperBitrix extends OrderWrapper
      */
     public function getExtId()
     {
-        $this->order->getField("COMMENTS"); //todo положит в какое-то именнованное поле в COMMENTS, для исключения конфликтов
+        return $this->order->getField("COMMENTS"); //todo положит в какое-то именнованное поле в COMMENTS, для исключения конфликтов
     }
 
     /**

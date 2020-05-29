@@ -9,13 +9,12 @@
 namespace esas\cmsgate;
 
 
-use Bitrix\Main\Context;
-use Bitrix\Sale\Basket;
-use Bitrix\Sale\Fuser;
 use Bitrix\Sale\Order;
+use CSaleOrder;
 use esas\cmsgate\descriptors\CmsConnectorDescriptor;
 use esas\cmsgate\descriptors\VendorDescriptor;
 use esas\cmsgate\descriptors\VersionDescriptor;
+use esas\cmsgate\lang\LocaleLoaderBitrix;
 use esas\cmsgate\view\admin\AdminViewFields;
 use esas\cmsgate\wrappers\OrderWrapper;
 use esas\cmsgate\wrappers\OrderWrapperBitrix;
@@ -63,11 +62,19 @@ class CmsConnectorBitrix extends CmsConnector
 
     public function createOrderWrapperForCurrentUser()
     {
-        $basket = Basket::loadItemsForFUser(
-            Fuser::getId(),
-            Context::getCurrent()->getSite()
-        );
-        return new OrderWrapperBitrix($basket->getOrder());
+        global $USER;
+        $orderId = $GLOBALS['ORDER_ID'];
+        if (!isset($orderId) || $orderId == '') {
+            $arFilter = Array(
+                "USER_ID" => $USER->GetID(),
+            );
+            $db_sales = CSaleOrder::GetList(array(), $arFilter);
+            while ($ar_sales = $db_sales->Fetch()) {
+                $orderId = $ar_sales['ID']; //присвоили переменной ID заказа
+                break; //оборвали цикл
+            }
+        }
+        return new OrderWrapperBitrix(Order::load($orderId));
     }
 
     public function createOrderWrapperByOrderNumber($orderNumber)
@@ -94,12 +101,12 @@ class CmsConnectorBitrix extends CmsConnector
 
     public function createConfigStorage()
     {
-        return new ConfigStorageJoomshopping();
+        return new ConfigStorageBitrix();
     }
 
     public function createLocaleLoader()
     {
-        return new LocaleLoaderJoomshopping();
+        return new LocaleLoaderBitrix();
     }
 
     public function createCmsConnectorDescriptor()
@@ -107,7 +114,7 @@ class CmsConnectorBitrix extends CmsConnector
         return new CmsConnectorDescriptor(
             "cmsgate-bitrix-lib",
             new VersionDescriptor(
-                "v1.9.1",
+                "v1.10.0",
                 "2020-05-19"
             ),
             "Cmsgate Bitrix connector",

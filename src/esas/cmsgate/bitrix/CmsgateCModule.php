@@ -9,9 +9,13 @@
 namespace esas\cmsgate\bitrix;
 
 use Bitrix\Main\Config\Option;
-use Bitrix\Main\ModuleManager;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\ModuleManager;
+use CFile;
 use CModule;
+use CSaleOrder;
+use CSalePaySystem;
+use CSalePaySystemAction;
 use esas\cmsgate\ConfigFields;
 use esas\cmsgate\messenger\MessagesBitrix;
 use esas\cmsgate\Registry;
@@ -20,7 +24,7 @@ use Exception;
 
 class CmsgateCModule extends CModule
 {
-    const MODULE_SUB_PATH = '/php_interface/include/sale_payment';
+    const MODULE_SUB_PATH = '/php_interface/include/sale_payment/';
 //    const MODULE_SUB_PATH = '/bitrix/modules/sale/payment/';
     var $MODULE_PATH;
     var $MODULE_ID;
@@ -37,10 +41,10 @@ class CmsgateCModule extends CModule
     /**
      * CmsgateCModule constructor.
      */
-    public function __construct($versionFilePath)
+    public function __construct()
     {
         $this->MODULE_ID = Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName();
-        $this->MODULE_PATH =  $_SERVER['DOCUMENT_ROOT'] . self::MODULE_SUB_PATH . Registry::getRegistry()->getPaySystemName();
+        $this->MODULE_PATH = $_SERVER['DOCUMENT_ROOT'] . '/bitrix' . self::MODULE_SUB_PATH . Registry::getRegistry()->getPaySystemName();
         $this->MODULE_VERSION = Registry::getRegistry()->getModuleDescriptor()->getVersion()->getVersion();
         $this->MODULE_VERSION_DATE = Registry::getRegistry()->getModuleDescriptor()->getVersion()->getDate();
         $this->MODULE_NAME = Registry::getRegistry()->getModuleDescriptor()->getModuleFullName();
@@ -54,9 +58,11 @@ class CmsgateCModule extends CModule
         CModule::IncludeModule("sale");
     }
 
-    protected function addFilesToInstallList() {
+    protected function addFilesToInstallList()
+    {
         $this->installFilesList[] = self::MODULE_SUB_PATH . Registry::getRegistry()->getPaySystemName();
-        $this->installFilesList[] = Registry::getRegistry()->getPaySystemName();
+        $this->installFilesList[] = "/images/sale/sale_payments/" . Registry::getRegistry()->getPaySystemName() . ".png";
+        $this->installFilesList[] = '/' . Registry::getRegistry()->getPaySystemName();
     }
 
     function InstallDB($arParams = array())
@@ -109,12 +115,19 @@ class CmsgateCModule extends CModule
     {
         # /bitrix/php_interface/include/sale_payment
         foreach ($this->installFilesList as $fileToInstall) {
-            $fromDir = $this->installSrcDir . $fileToInstall;
-            $toDir = $_SERVER['DOCUMENT_ROOT'] . $fileToInstall;
-            if (!is_dir($toDir)) {
-                mkdir($toDir, 0755);
+            $from = $this->installSrcDir . $fileToInstall;
+            $to = $_SERVER['DOCUMENT_ROOT'] . '/bitrix' . $fileToInstall;
+            if (is_dir($from)) {
+                if (!is_dir($to)) {
+                    mkdir($to, 0755);
+                }
+            } else {
+                $toDir = $_SERVER['DOCUMENT_ROOT'] . '/bitrix' . substr($fileToInstall, 0, strrpos($fileToInstall, '/'));
+                if (!is_dir($toDir)) {
+                    mkdir($to, 0755);
+                }
             }
-            CopyDirFiles($fromDir, $toDir, true, true);
+            CopyDirFiles($from, $to, true, true);
         }
         return true;
     }
@@ -122,7 +135,7 @@ class CmsgateCModule extends CModule
     function UnInstallFiles()
     {
         foreach ($this->installFilesList as $fileToDelete) {
-            DeleteDirFilesEx($_SERVER['DOCUMENT_ROOT'] . $fileToDelete);
+            DeleteDirFilesEx('/bitrix' . $fileToDelete);
         }
         return true;
     }
@@ -142,7 +155,8 @@ class CmsgateCModule extends CModule
         }
     }
 
-    public function PreInstallCheck() {
+    public function PreInstallCheck()
+    {
         if (!function_exists("curl_init"))
             throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_CURL_NOT_INSTALLED));
     }
@@ -164,8 +178,9 @@ class CmsgateCModule extends CModule
             array(
                 "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
                 "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),
-                "LOGOTIP" => $this->MODULE_PATH . "/" . Registry::getRegistry()->getPaySystemName() . ".png",
-                "ACTIVE" => "Y",
+                "LOGOTIP" => CFile::MakeFileArray('/bitrix/images/sale/sale_payments/' . Registry::getRegistry()->getPaySystemName() . '.png'),
+                "ACTIVE" => "N",
+                "ENTITY_REGISTRY_TYPE" => "ORDER", // без этого созданная платежная система не отображается в списке
                 "SORT" => 100,
             )
         );
@@ -178,8 +193,7 @@ class CmsgateCModule extends CModule
             "PAY_SYSTEM_ID" => $psId,
             "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
             "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),
-            "ACTION_FILE" => $this->MODULE_PATH,
-            "LOGOTIP" => $this->MODULE_PATH . "/hutkigrosh.png",
+            "ACTION_FILE" => Registry::getRegistry()->getPaySystemName(),
             "NEW_WINDOW" => "N",
             "HAVE_PREPAY" => "N",
             "HAVE_RESULT" => "N",
@@ -213,6 +227,8 @@ class CmsgateCModule extends CModule
     protected function deletePaysys()
     {
         $psId = (int)Option::get($this->MODULE_ID, "PAY_SYSTEM_ID");
+        if ($psId == '0')
+            return false;
         $order = CSaleOrder::GetList(array(), array("PAY_SYSTEM_ID" => $psId))->Fetch();
         if ($order["ID"] > 0)
             throw new Exception(Loc::getMessage("hutkigrosh_ERROR_ORDERS_EXIST"));
@@ -226,10 +242,12 @@ class CmsgateCModule extends CModule
 
     protected function deletePaysysHandler()
     {
-        $handlersIds = explode("|", Option::get($this->MODULE_ID, "handlers_ids"));
-        if (!empty($handlersIds))
+        $handlersIds = Option::get($this->MODULE_ID, "handlers_ids");
+        if (!empty($handlersIds)) {
+            $handlersIds = explode("|", $handlersIds);
             foreach ($handlersIds as $id)
                 CSalePaySystemAction::Delete($id);
+        }
         return true;
     }
 }

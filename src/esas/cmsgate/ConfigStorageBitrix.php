@@ -8,9 +8,9 @@
 
 namespace esas\cmsgate;
 
-use Exception;
 use Bitrix\Main\Config\Option;
 use CSalePaySystemAction;
+use Exception;
 
 class ConfigStorageBitrix extends ConfigStorageCms
 {
@@ -21,7 +21,7 @@ class ConfigStorageBitrix extends ConfigStorageCms
         parent::__construct();
         //получаем параметры платежной системы
         //может быть есть возможность сделать это как-то более красиво?
-        $psId = (int)Option::get(CmsConnectorBitrix::getInstance()->getModuleId(), "PAY_SYSTEM_ID");
+        $psId = (int)Option::get(Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(), "PAY_SYSTEM_ID");
         $this->params = CSalePaySystemAction::getParamsByConsumer('PAYSYSTEM_' . $psId, null);
     }
 
@@ -43,11 +43,18 @@ class ConfigStorageBitrix extends ConfigStorageCms
      */
     public function convertToBoolean($cmsConfigValue)
     {
-        return $cmsConfigValue == '1' || $cmsConfigValue == "true";
+        return $cmsConfigValue == 'Y' || $cmsConfigValue == '1' || $cmsConfigValue == "true";
     }
 
     public function saveConfig($key, $value)
     {
         //todo implement
     }
+
+    public function createCmsRelatedKey($key)
+    {
+        return Registry::getRegistry()->getPaySystemName() . "_" . $key;
     }
+
+
+}
