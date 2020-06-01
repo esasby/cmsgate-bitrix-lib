@@ -162,6 +162,7 @@ class OrderWrapperBitrix extends OrderWrapper
     public function saveExtId($extId)
     {
         CSaleOrder::Update($this->getOrderId(), array("COMMENTS" => $extId));
+//        $collection = $this->order->getPaymentCollection(); // в идеале, надо сохранять в платежах, а не в заказе
         $this->order->setField("COMMENTS", $extId);
     }
 }

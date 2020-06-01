@@ -36,7 +36,7 @@ class CmsgateCModule extends CModule
     var $PARTNER_NAME;
     var $PARTNER_URI;
     private $installSrcDir;
-    private $installFilesList;
+    protected $installFilesList;
 
     /**
      * CmsgateCModule constructor.
@@ -62,7 +62,6 @@ class CmsgateCModule extends CModule
     {
         $this->installFilesList[] = self::MODULE_SUB_PATH . Registry::getRegistry()->getPaySystemName();
         $this->installFilesList[] = "/images/sale/sale_payments/" . Registry::getRegistry()->getPaySystemName() . ".png";
-        $this->installFilesList[] = '/' . Registry::getRegistry()->getPaySystemName();
     }
 
     function InstallDB($arParams = array())

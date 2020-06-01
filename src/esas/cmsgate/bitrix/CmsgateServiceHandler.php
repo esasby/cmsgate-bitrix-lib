@@ -27,23 +27,17 @@ abstract class CmsgateServiceHandler extends PaySystem\ServiceHandler
 
 
     /**
+     * Идентифицирует колбэк от платежной системы. Адрес возврата:
+     * http://some.domain/bitrix/tools/sale_ps_result.php?handler=hutkigrosh
 	 * @return array
 	 */
 	static public function getIndicativeFields()
 	{
-		return array('BX_HANDLER' => strtoupper(Registry::getRegistry()->getPaySystemName()));
+		return array('handler' => Registry::getRegistry()->getPaySystemName());
 	}
 
 
 
-	/**
-	 * @param Request $request
-	 * @return mixed
-	 */
-	public function getPaymentIdFromRequest(Request $request)
-	{
-		return $request->get('PAYMENT_ID');
-	}
 
 	/**
 	 * @param Payment $payment
