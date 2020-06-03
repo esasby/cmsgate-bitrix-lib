@@ -230,7 +230,7 @@ class CmsgateCModule extends CModule
             return false;
         $order = CSaleOrder::GetList(array(), array("PAY_SYSTEM_ID" => $psId))->Fetch();
         if ($order["ID"] > 0)
-            throw new Exception(Loc::getMessage("hutkigrosh_ERROR_ORDERS_EXIST"));
+            throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_ORDERS_EXIST));
         // verify that there is a payment system to delete
         if ($arPaySys = CSalePaySystem::GetByID($psId)) {
             if (!CSalePaySystem::Delete($psId))

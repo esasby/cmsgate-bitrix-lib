@@ -1,6 +1,7 @@
 <?
 namespace esas\cmsgate\bitrix;
 
+use Bitrix\Main\Error;
 use Bitrix\Main\Request;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Sale\PaySystem;
@@ -9,6 +10,8 @@ use Bitrix\Sale\PaySystem\Service;
 use Bitrix\Sale\PriceMaths;
 use esas\cmsgate\Registry;
 use esas\cmsgate\utils\Logger;
+use Exception;
+use Throwable;
 
 Loc::loadMessages(__FILE__);
 
@@ -37,7 +40,33 @@ abstract class CmsgateServiceHandler extends PaySystem\ServiceHandler
 	}
 
 
+    public function getPaymentIdFromRequest(Request $request)
+    {
+        try {
+            return $this->getPaymentIdFromRequestSafe($request);
+        } catch (Exception $e) {
+            $this->logger->error("GetPaymentId Exception: " . $e->getMessage(), $e);
+        } catch (Throwable $e) {
+            $this->logger->error("GetPaymentId Exception: " . $e->getMessage(), $e);
+        }
+    }
 
+    public abstract function getPaymentIdFromRequestSafe(Request $request);
+
+
+    public function processRequest(Payment $payment, Request $request)
+    {
+        try {
+            return $this->processRequestSafe($payment, $request);
+        } catch (Throwable $e) {
+            $this->logger->error("Exception:", $e);
+            $result = new PaySystem\ServiceResult();
+            $result->addError(new Error($e->getMessage()));
+        }
+        return $result;
+    }
+
+    public abstract function processRequestSafe(Payment $payment, Request $request);
 
 	/**
 	 * @param Payment $payment
