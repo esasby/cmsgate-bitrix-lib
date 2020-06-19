@@ -4,9 +4,8 @@ namespace esas\cmsgate\wrappers;
 
 use Bitrix\Sale\Order;
 use CSaleOrder;
-use esas\hutkigrosh\lang\TranslatorBitrix;
 
-class OrderWrapperBitrix extends OrderWrapper
+class OrderWrapperBitrix extends OrderSafeWrapper
 {
     private $order;
     private $products;
@@ -25,12 +24,12 @@ class OrderWrapperBitrix extends OrderWrapper
      * Уникальный номер заказ в рамках CMS
      * @return string
      */
-    public function getOrderId()
+    public function getOrderIdUnsafe()
     {
         return $this->order->getId();
     }
 
-    public function getOrderNumber()
+    public function getOrderNumberUnsafe()
     {
         // если включен шаблон генерации номера заказа, то подставляем этот номер
         $accountNumber = $this->order->getField('ACCOUNT_NUMBER');
@@ -41,7 +40,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * Полное имя покупателя
      * @return string
      */
-    public function getFullName()
+    public function getFullNameUnsafe()
     {
         return $this->order->getPropertyCollection()->getPayerName()->getValue();
     }
@@ -51,7 +50,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * (если включено администратором)
      * @return string
      */
-    public function getMobilePhone()
+    public function getMobilePhoneUnsafe()
     {
         return $this->order->getPropertyCollection()->getPhone()->getValue();
     }
@@ -61,7 +60,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * (если включено администратором)
      * @return string
      */
-    public function getEmail()
+    public function getEmailUnsafe()
     {
         return $this->order->getPropertyCollection()->getUserEmail()->getValue();
     }
@@ -70,7 +69,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * Физический адрес покупателя
      * @return string
      */
-    public function getAddress()
+    public function getAddressUnsafe()
     {
         $address = $this->order->getPropertyCollection()->getAddress();
         if ($address == null)
@@ -85,7 +84,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * Общая сумма товаров в заказе
      * @return string
      */
-    public function getAmount()
+    public function getAmountUnsafe()
     {
         return $this->order->getPrice();
     }
@@ -94,7 +93,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * Валюта заказа (буквенный код)
      * @return string
      */
-    public function getCurrency()
+    public function getCurrencyUnsafe()
     {
 //        $orderCurrency = isset($orderCurrency) ? $orderCurrency : $line_item['CURRENCY']; //TODO со временем можно сделать выставление разных счетов,
         return $this->order->getCurrency();
@@ -104,7 +103,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * Массив товаров в заказе
      * @return \esas\hutkigrosh\wrappers\OrderProductWrapper[]
      */
-    public function getProducts()
+    public function getProductsUnsafe()
     {
         if ($this->products != null)
             return $this->products;
@@ -118,7 +117,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * Текущий статус заказа в CMS
      * @return mixed
      */
-    public function getStatus()
+    public function getStatusUnsafe()
     {
         return $this->order->getField("STATUS_ID");
     }
@@ -141,7 +140,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * Идентификатор клиента
      * @return string
      */
-    public function getClientId()
+    public function getClientIdUnsafe()
     {
         // TODO: Implement getClientId() method.
     }
@@ -150,7 +149,7 @@ class OrderWrapperBitrix extends OrderWrapper
      * BillId (идентификатор хуткигрош) успешно выставленного счета
      * @return mixed
      */
-    public function getExtId()
+    public function getExtIdUnsafe()
     {
         return $this->order->getField("COMMENTS"); //todo положит в какое-то именнованное поле в COMMENTS, для исключения конфликтов
     }

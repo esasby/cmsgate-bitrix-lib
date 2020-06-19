@@ -9,13 +9,15 @@
 namespace esas\cmsgate;
 
 
+use Bitrix\Crm\Invoice\Invoice;
+use Bitrix\Main\Config\Option;
 use Bitrix\Sale\Order;
 use CSaleOrder;
+use esas\cmsgate\bitrix\CmsgateCModule;
 use esas\cmsgate\descriptors\CmsConnectorDescriptor;
 use esas\cmsgate\descriptors\VendorDescriptor;
 use esas\cmsgate\descriptors\VersionDescriptor;
 use esas\cmsgate\lang\LocaleLoaderBitrix;
-use esas\cmsgate\view\admin\AdminViewFields;
 use esas\cmsgate\wrappers\OrderWrapper;
 use esas\cmsgate\wrappers\OrderWrapperBitrix;
 
@@ -33,30 +35,28 @@ class CmsConnectorBitrix extends CmsConnector
 
     public function createCommonConfigForm($managedFields)
     {
-        $configForm = new ConfigFormJoomshopping(
-            $managedFields,
-            AdminViewFields::CONFIG_FORM_COMMON,
-            null,
-            null);
-        $configForm->addSubmitButton(AdminViewFields::CONFIG_FORM_BUTTON_SAVE);
-        $configForm->addSubmitButton(AdminViewFields::CONFIG_FORM_BUTTON_DOWNLOAD_LOG);
-        $configForm->addSubmitButton(AdminViewFields::CONFIG_FORM_BUTTON_CANCEL);
-        return $configForm;
+        return null; //not implemented
     }
 
     public function createSystemSettingsWrapper()
     {
-        return new SystemSettingsWrapperJoomshopping();
+        return null; // not implemented
+    }
+
+    public function getPaysystemId()
+    {
+        return (int)Option::get(Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(), CmsgateCModule::OPTION_PAYSYSTEM_ID);
     }
 
     /**
      * По локальному id заказа возвращает wrapper
      * @param $orderId
      * @return OrderWrapper
+     * @throws \Bitrix\Main\ArgumentNullException
      */
     public function createOrderWrapperByOrderId($orderId)
     {
-        $bitrixOrder = Order::load($orderId);
+        $bitrixOrder = Invoice::load($orderId);
         return new OrderWrapperBitrix($bitrixOrder);
     }
 
@@ -74,7 +74,7 @@ class CmsConnectorBitrix extends CmsConnector
                 break; //оборвали цикл
             }
         }
-        return new OrderWrapperBitrix(Order::load($orderId));
+        return $this->createOrderWrapperByOrderId($orderId);
     }
 
     public function createOrderWrapperByOrderNumber($orderNumber)
@@ -114,7 +114,7 @@ class CmsConnectorBitrix extends CmsConnector
         return new CmsConnectorDescriptor(
             "cmsgate-bitrix-lib",
             new VersionDescriptor(
-                "v1.10.2",
+                "v1.11.0",
                 "2020-06-03"
             ),
             "Cmsgate Bitrix connector",

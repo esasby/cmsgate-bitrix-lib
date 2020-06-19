@@ -9,13 +9,11 @@
 namespace esas\cmsgate\bitrix;
 
 use Bitrix\Main\Config\Option;
-use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\ModuleManager;
+use Bitrix\Sale\PaySystem\Manager;
 use CFile;
 use CModule;
 use CSaleOrder;
-use CSalePaySystem;
-use CSalePaySystemAction;
 use esas\cmsgate\ConfigFields;
 use esas\cmsgate\messenger\MessagesBitrix;
 use esas\cmsgate\Registry;
@@ -25,7 +23,7 @@ use Exception;
 class CmsgateCModule extends CModule
 {
     const MODULE_SUB_PATH = '/php_interface/include/sale_payment/';
-//    const MODULE_SUB_PATH = '/bitrix/modules/sale/payment/';
+    const OPTION_PAYSYSTEM_ID = "PAY_SYSTEM_ID";
     var $MODULE_PATH;
     var $MODULE_ID;
     var $MODULE_VERSION = '';
@@ -52,7 +50,6 @@ class CmsgateCModule extends CModule
         $this->PARTNER_NAME = Registry::getRegistry()->getModuleDescriptor()->getVendor()->getFullName();
         $this->PARTNER_URI = Registry::getRegistry()->getModuleDescriptor()->getVendor()->getUrl();
 
-
         $this->installSrcDir = $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/' . $this->MODULE_ID . '/install';
         $this->addFilesToInstallList();
         CModule::IncludeModule("sale");
@@ -67,20 +64,12 @@ class CmsgateCModule extends CModule
     function InstallDB($arParams = array())
     {
         ModuleManager::RegisterModule($this->MODULE_ID);
-
         $psId = $this->addPaysys();
         if ($psId === false)
             throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_PS_INSTALL));
 
-        //сохранение paystsemId в настройках модуля
-        Option::set($this->MODULE_ID, "PAY_SYSTEM_ID", $psId);
-
-        //регистрируем обработчик пл. системы
-        $handlersIds = $this->addPaysysHandler($psId);
-        if (empty($handlersIds))
-            throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_PS_ACTION_REG));
-        //сохраняем id обработчиков пл. системы
-        Option::set($this->MODULE_ID, "handlers_ids", implode("|", $handlersIds));
+        //сохранение paysystemId в настройках модуля
+        Option::set($this->MODULE_ID, self::OPTION_PAYSYSTEM_ID, $psId);
 
         return true;
     }
@@ -93,7 +82,6 @@ class CmsgateCModule extends CModule
     function UnInstallDB($arParams = array())
     {
         $this->deletePaysys();
-        $this->deletePaysysHandler();
         Option::delete($this->MODULE_ID);
         ModuleManager::UnRegisterModule($this->MODULE_ID);
         return true;
@@ -147,6 +135,7 @@ class CmsgateCModule extends CModule
             $this->PreInstallCheck();
             $this->InstallFiles();
             $this->InstallDB();
+            $this->InstallEvents();
         } catch (Exception $e) {
             $this->DoUninstall();
             $GLOBALS["APPLICATION"]->ThrowException($e->getMessage());
@@ -165,6 +154,7 @@ class CmsgateCModule extends CModule
         try {
             $this->UnInstallDB();
             $this->UnInstallFiles();
+            $this->UnInstallEvents();
         } catch (Exception $e) {
             $GLOBALS["APPLICATION"]->ThrowException($e->getMessage());
             return false;
@@ -173,50 +163,28 @@ class CmsgateCModule extends CModule
 
     protected function addPaysys()
     {
-        return CSalePaySystem::Add(
+        return Manager::Add(
             array(
                 "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
-                "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),
-                "LOGOTIP" => CFile::MakeFileArray('/bitrix/images/sale/sale_payments/' . Registry::getRegistry()->getPaySystemName() . '.png'),
+                "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),  //todo
+                "ACTION_FILE" => Registry::getRegistry()->getPaySystemName(),
+                "LOGOTIP" => CFile::MakeFileArray('/bitrix/images/sale/sale_payments/' . Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName() . '.png'),
                 "ACTIVE" => "N",
-                "ENTITY_REGISTRY_TYPE" => "ORDER", // без этого созданная платежная система не отображается в списке
+                "ENTITY_REGISTRY_TYPE" => $this->getPaysystemType(), // без этого созданная платежная система не отображается в списке
+                "NEW_WINDOW" => "N",
+                "HAVE_PREPAY" => "N",
+                "HAVE_RESULT" => "N",
+                "HAVE_ACTION" => "N",
+                "HAVE_PAYMENT" => "Y",
+                "HAVE_RESULT_RECEIVE" => "Y",
+                "ENCODING" => "utf-8",
                 "SORT" => 100,
             )
         );
     }
 
-    protected function addPaysysHandler($psId)
-    {
-        $handlersIds = array();
-        $fields = array(
-            "PAY_SYSTEM_ID" => $psId,
-            "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
-            "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),
-            "ACTION_FILE" => Registry::getRegistry()->getPaySystemName(),
-            "NEW_WINDOW" => "N",
-            "HAVE_PREPAY" => "N",
-            "HAVE_RESULT" => "N",
-            "HAVE_ACTION" => "N",
-            "HAVE_PAYMENT" => "Y",
-            "HAVE_RESULT_RECEIVE" => "Y",
-            "ENCODING" => "utf-8",
-        );
-        $id = CSalePaySystemAction::Add($fields);
-        $handlersIds[] = $id;
-//        $personTypes = CSalePersonType::GetList(
-//            array("SORT" => "ASC", "NAME" => "ASC"),
-//            array()
-//        );
-//        while($pt = $personTypes->Fetch())
-//        {
-//            $fields["PERSON_TYPE_ID"] = $pt["ID"];
-//            $id = CSalePaySystemAction::Add($fields);
-//            if($id != false)
-//                $handlersIds[] = $id;
-//
-//        }
-
-        return $handlersIds;
+    protected function getPaysystemType() {
+        return "ORDER";
     }
 
     /**
@@ -225,28 +193,18 @@ class CmsgateCModule extends CModule
      */
     protected function deletePaysys()
     {
-        $psId = (int)Option::get($this->MODULE_ID, "PAY_SYSTEM_ID");
+        $psId = (int)Option::get($this->MODULE_ID, self::OPTION_PAYSYSTEM_ID);
         if ($psId == '0')
             return false;
         $order = CSaleOrder::GetList(array(), array("PAY_SYSTEM_ID" => $psId))->Fetch();
         if ($order["ID"] > 0)
             throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_ORDERS_EXIST));
         // verify that there is a payment system to delete
-        if ($arPaySys = CSalePaySystem::GetByID($psId)) {
-            if (!CSalePaySystem::Delete($psId))
+        if ($arPaySys = Manager::GetByID($psId)) {
+            if (!Manager::delete($psId))
                 throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_DELETE_EXCEPTION));
         }
         return true;
     }
 
-    protected function deletePaysysHandler()
-    {
-        $handlersIds = Option::get($this->MODULE_ID, "handlers_ids");
-        if (!empty($handlersIds)) {
-            $handlersIds = explode("|", $handlersIds);
-            foreach ($handlersIds as $id)
-                CSalePaySystemAction::Delete($id);
-        }
-        return true;
-    }
 }
