@@ -7,8 +7,8 @@ use CSaleOrder;
 
 class OrderWrapperBitrix extends OrderSafeWrapper
 {
-    private $order;
-    private $products;
+    protected $order;
+    protected $products;
 
     /**
      * OrderWrapperJoomshopping constructor.

@@ -19,6 +19,7 @@ use esas\cmsgate\lang\LocaleLoaderBitrix;
 use esas\cmsgate\view\admin\AdminViewFields;
 use esas\cmsgate\wrappers\OrderWrapper;
 use esas\cmsgate\wrappers\OrderWrapperBitrix;
+use esas\cmsgate\wrappers\OrderWrapperBitrix24;
 
 class CmsConnectorBitrix24 extends CmsConnectorBitrix
 {
@@ -40,7 +41,7 @@ class CmsConnectorBitrix24 extends CmsConnectorBitrix
     public function createOrderWrapperByOrderId($orderId)
     {
         $bitrixOrder = Invoice::load($orderId);
-        return new OrderWrapperBitrix($bitrixOrder);
+        return new OrderWrapperBitrix24($bitrixOrder);
     }
 
     public function createOrderWrapperByOrderNumber($orderNumber)
@@ -48,7 +49,7 @@ class CmsConnectorBitrix24 extends CmsConnectorBitrix
         $orderByAccount = Invoice::loadByAccountNumber($orderNumber);
         if ($orderByAccount == null)
             $orderByAccount = Invoice::load($orderNumber);
-        return new OrderWrapperBitrix($orderByAccount);
+        return new OrderWrapperBitrix24($orderByAccount);
     }
 
     public function createOrderWrapperByExtId($extId)
@@ -62,6 +63,6 @@ class CmsConnectorBitrix24 extends CmsConnectorBitrix
         if ($dbRes == null || count($dbRes) != 1)
             return null;
         else
-            return new OrderWrapperBitrix($dbRes[0]); //todo check
+            return new OrderWrapperBitrix24($dbRes[0]); //todo check
     }
 }

@@ -57,8 +57,8 @@ class CmsgateCModule extends CModule
 
     protected function addFilesToInstallList()
     {
-        $this->installFilesList[] = self::MODULE_SUB_PATH . Registry::getRegistry()->getPaySystemName();
-        $this->installFilesList[] = "/images/sale/sale_payments/" . Registry::getRegistry()->getPaySystemName() . ".png";
+        $this->installFilesList[] = self::MODULE_SUB_PATH . Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName();
+        $this->installFilesList[] = "/images/sale/sale_payments/" . Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName() . ".png";
     }
 
     function InstallDB($arParams = array())
@@ -167,7 +167,7 @@ class CmsgateCModule extends CModule
             array(
                 "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
                 "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),  //todo
-                "ACTION_FILE" => Registry::getRegistry()->getPaySystemName(),
+                "ACTION_FILE" => Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(),
                 "LOGOTIP" => CFile::MakeFileArray('/bitrix/images/sale/sale_payments/' . Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName() . '.png'),
                 "ACTIVE" => "N",
                 "ENTITY_REGISTRY_TYPE" => $this->getPaysystemType(), // без этого созданная платежная система не отображается в списке

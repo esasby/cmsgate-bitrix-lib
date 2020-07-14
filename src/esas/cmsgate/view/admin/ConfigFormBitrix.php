@@ -46,14 +46,18 @@ class ConfigFormBitrix extends ConfigFormArray
         return array(
             'NAME' => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
             'SORT' => 500,
-            'CODES' => parent::generate());
+            'CODES' => $this->generateCodes());
+    }
+
+    public function generateCodes() {
+        return parent::generate();
     }
 
     public function generateFieldArray(ConfigField $configField, $addDefault = true)
     {
         $ret = array(
             'NAME' => $configField->getName(),
-            'GROUP' => $this->getGroup($configField),
+            'GROUP' => $this->getFormKey(),
             'DESCRIPTION' => $configField->getDescription(),
             'SORT' => $configField->getSortOrder()
         );
@@ -70,12 +74,6 @@ class ConfigFormBitrix extends ConfigFormArray
     public function generateTextField(ConfigField $configField)
     {
         return $this->generateFieldArray($configField);
-    }
-
-
-    public function getGroup(ConfigField $configField)
-    {
-        return 'PAYMENT';
     }
 
 
