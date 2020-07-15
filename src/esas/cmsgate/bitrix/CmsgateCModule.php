@@ -163,7 +163,7 @@ class CmsgateCModule extends CModule
 
     protected function addPaysys()
     {
-        return Manager::Add(
+        $result = Manager::Add(
             array(
                 "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
                 "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),  //todo
@@ -181,6 +181,7 @@ class CmsgateCModule extends CModule
                 "SORT" => 100,
             )
         );
+        return $result->getId();
     }
 
     protected function getPaysystemType() {
