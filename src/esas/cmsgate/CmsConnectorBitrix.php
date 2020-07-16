@@ -9,7 +9,6 @@
 namespace esas\cmsgate;
 
 
-use Bitrix\Crm\Invoice\Invoice;
 use Bitrix\Main\Config\Option;
 use Bitrix\Sale\Order;
 use CSaleOrder;
@@ -56,7 +55,7 @@ class CmsConnectorBitrix extends CmsConnector
      */
     public function createOrderWrapperByOrderId($orderId)
     {
-        $bitrixOrder = Invoice::load($orderId);
+        $bitrixOrder = Order::load($orderId);
         return new OrderWrapperBitrix($bitrixOrder);
     }
 
