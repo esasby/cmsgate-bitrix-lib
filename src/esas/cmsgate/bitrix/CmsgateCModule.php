@@ -14,6 +14,7 @@ use Bitrix\Sale\PaySystem\Manager;
 use CFile;
 use CModule;
 use CSaleOrder;
+use esas\cmsgate\CmsConnectorBitrix;
 use esas\cmsgate\ConfigFields;
 use esas\cmsgate\messenger\MessagesBitrix;
 use esas\cmsgate\Registry;
@@ -42,7 +43,7 @@ class CmsgateCModule extends CModule
     public function __construct()
     {
         $this->MODULE_ID = Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName();
-        $this->MODULE_PATH = $_SERVER['DOCUMENT_ROOT'] . '/bitrix' . self::MODULE_SUB_PATH . Registry::getRegistry()->getPaySystemName();
+        $this->MODULE_PATH = $_SERVER['DOCUMENT_ROOT'] . '/bitrix' . self::MODULE_SUB_PATH . CmsConnectorBitrix::getFilteredModuleMachineName();
         $this->MODULE_VERSION = Registry::getRegistry()->getModuleDescriptor()->getVersion()->getVersion();
         $this->MODULE_VERSION_DATE = Registry::getRegistry()->getModuleDescriptor()->getVersion()->getDate();
         $this->MODULE_NAME = Registry::getRegistry()->getModuleDescriptor()->getModuleFullName();
@@ -57,8 +58,8 @@ class CmsgateCModule extends CModule
 
     protected function addFilesToInstallList()
     {
-        $this->installFilesList[] = self::MODULE_SUB_PATH . Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName();
-        $this->installFilesList[] = "/images/sale/sale_payments/" . Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName() . ".png";
+        $this->installFilesList[] = self::MODULE_SUB_PATH . CmsConnectorBitrix::getFilteredModuleMachineName();
+        $this->installFilesList[] = "/images/sale/sale_payments/" . CmsConnectorBitrix::getFilteredModuleMachineName() . ".png";
     }
 
     function InstallDB($arParams = array())
@@ -167,7 +168,7 @@ class CmsgateCModule extends CModule
             array(
                 "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
                 "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),  //todo
-                "ACTION_FILE" => Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(),
+                "ACTION_FILE" => CmsConnectorBitrix::getFilteredModuleMachineName(),
                 "LOGOTIP" => CFile::MakeFileArray('/bitrix/images/sale/sale_payments/' . Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName() . '.png'),
                 "ACTIVE" => "N",
                 "ENTITY_REGISTRY_TYPE" => $this->getPaysystemType(), // без этого созданная платежная система не отображается в списке
