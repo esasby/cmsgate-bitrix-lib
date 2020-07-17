@@ -8,8 +8,11 @@
 
 namespace esas\cmsgate\bitrix;
 
+use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
+use Bitrix\Main\IO\File;
 use Bitrix\Main\ModuleManager;
+use Bitrix\Sale\Internals\PaySystemActionTable;
 use Bitrix\Sale\PaySystem\Manager;
 use CFile;
 use CModule;
@@ -162,30 +165,47 @@ class CmsgateCModule extends CModule
         }
     }
 
+    /**
+     * Первоначально тут был просто вызов Manager::Add, но в таком случае не происходит загрузка логотипа, как было в CSalePaySystem::Add
+     * Поэтому взят пример кода из \Bitrix\Sale\PaySystem\Manager::createInnerPaySystem
+     * @return int
+     */
     protected function addPaysys()
     {
-        $result = Manager::Add(
-            array(
-                "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
-                "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),  //todo
-                "ACTION_FILE" => CmsConnectorBitrix::getFilteredModuleMachineName(),
-                "LOGOTIP" => CFile::MakeFileArray('/bitrix/images/sale/sale_payments/' . Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName() . '.png'),
-                "ACTIVE" => "N",
-                "ENTITY_REGISTRY_TYPE" => $this->getPaysystemType(), // без этого созданная платежная система не отображается в списке
-                "NEW_WINDOW" => "N",
-                "HAVE_PREPAY" => "N",
-                "HAVE_RESULT" => "N",
-                "HAVE_ACTION" => "N",
-                "HAVE_PAYMENT" => "Y",
-                "HAVE_RESULT_RECEIVE" => "Y",
-                "ENCODING" => "utf-8",
-                "SORT" => 100,
-            )
+        $paySystemSettings = array(
+            "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
+            "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),  //todo
+            "ACTION_FILE" => CmsConnectorBitrix::getFilteredModuleMachineName(),
+            "ACTIVE" => "N",
+            "ENTITY_REGISTRY_TYPE" => $this->getPaysystemType(), // без этого созданная платежная система не отображается в списке
+            "NEW_WINDOW" => "N",
+            "HAVE_PREPAY" => "N",
+            "HAVE_RESULT" => "N",
+            "HAVE_ACTION" => "N",
+            "HAVE_PAYMENT" => "Y",
+            "HAVE_RESULT_RECEIVE" => "Y",
+            "ENCODING" => "utf-8",
+            "SORT" => 100,
         );
-        return $result->getId();
+
+
+        $imagePath = Application::getDocumentRoot() . '/bitrix/images/sale/sale_payments/' . CmsConnectorBitrix::getFilteredModuleMachineName() . '.png';
+        if (File::isFileExists($imagePath)) {
+            $paySystemSettings['LOGOTIP'] = \CFile::MakeFileArray($imagePath);
+            $paySystemSettings['LOGOTIP']['MODULE_ID'] = "sale";
+            \CFile::SaveForDB($paySystemSettings, 'LOGOTIP', 'sale/paysystem/logotip');
+        }
+
+        $result = PaySystemActionTable::add($paySystemSettings);
+
+        if ($result->isSuccess())
+            return $result->getId();
+
+        return 0;
     }
 
-    protected function getPaysystemType() {
+    protected function getPaysystemType()
+    {
         return "ORDER";
     }
 
