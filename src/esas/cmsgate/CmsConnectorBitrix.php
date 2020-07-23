@@ -122,16 +122,4 @@ class CmsConnectorBitrix extends CmsConnector
             "bitrix"
         );
     }
-
-    /**
-     * В bitrix есть однозначная связка между:
-     * - именем директории в php_interface\include\sale_payment\
-     * - именем класса в handler.php
-     * - ACTION_FILE в БД в таблице b_sale_pay_system_action
-     * При этом символ "." недопустим
-     * @return mixed
-     */
-    public static function getFilteredModuleMachineName() {
-        return str_replace ('.', '_', Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName());
-    }
 }

@@ -46,7 +46,7 @@ class CmsgateCModule extends CModule
     public function __construct()
     {
         $this->MODULE_ID = Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName();
-        $this->MODULE_PATH = $_SERVER['DOCUMENT_ROOT'] . '/bitrix' . self::MODULE_SUB_PATH . CmsConnectorBitrix::getFilteredModuleMachineName();
+        $this->MODULE_PATH = $_SERVER['DOCUMENT_ROOT'] . '/bitrix' . self::MODULE_SUB_PATH . $this->getModuleActionName();
         $this->MODULE_VERSION = Registry::getRegistry()->getModuleDescriptor()->getVersion()->getVersion();
         $this->MODULE_VERSION_DATE = Registry::getRegistry()->getModuleDescriptor()->getVersion()->getDate();
         $this->MODULE_NAME = Registry::getRegistry()->getModuleDescriptor()->getModuleFullName();
@@ -61,8 +61,8 @@ class CmsgateCModule extends CModule
 
     protected function addFilesToInstallList()
     {
-        $this->installFilesList[] = self::MODULE_SUB_PATH . CmsConnectorBitrix::getFilteredModuleMachineName();
-        $this->installFilesList[] = "/images/sale/sale_payments/" . CmsConnectorBitrix::getFilteredModuleMachineName() . ".png";
+        $this->installFilesList[] = self::MODULE_SUB_PATH . $this->getModuleActionName();
+        $this->installFilesList[] = "/images/sale/sale_payments/" . $this->getModuleActionName() . ".png";
     }
 
     function InstallDB($arParams = array())
@@ -166,6 +166,18 @@ class CmsgateCModule extends CModule
     }
 
     /**
+     * В bitrix есть однозначная связка между:
+     * - именем директории в php_interface\include\sale_payment\
+     * - именем класса в handler.php
+     * - ACTION_FILE в БД в таблице b_sale_pay_system_action
+     * При этом символ "." недопустим
+     * @return mixed
+     */
+    public function getModuleActionName() {
+        return str_replace ('.', '_', Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName());
+    }
+
+    /**
      * Первоначально тут был просто вызов Manager::Add, но в таком случае не происходит загрузка логотипа, как было в CSalePaySystem::Add
      * Поэтому взят пример кода из \Bitrix\Sale\PaySystem\Manager::createInnerPaySystem
      * @return int
@@ -175,7 +187,7 @@ class CmsgateCModule extends CModule
         $paySystemSettings = array(
             "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
             "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),  //todo
-            "ACTION_FILE" => CmsConnectorBitrix::getFilteredModuleMachineName(),
+            "ACTION_FILE" => $this->getModuleActionName(),
             "ACTIVE" => "N",
             "ENTITY_REGISTRY_TYPE" => $this->getPaysystemType(), // без этого созданная платежная система не отображается в списке
             "NEW_WINDOW" => "N",
@@ -189,7 +201,7 @@ class CmsgateCModule extends CModule
         );
 
 
-        $imagePath = Application::getDocumentRoot() . '/bitrix/images/sale/sale_payments/' . CmsConnectorBitrix::getFilteredModuleMachineName() . '.png';
+        $imagePath = Application::getDocumentRoot() . '/bitrix/images/sale/sale_payments/' . $this->getModuleActionName() . '.png';
         if (File::isFileExists($imagePath)) {
             $paySystemSettings['LOGOTIP'] = \CFile::MakeFileArray($imagePath);
             $paySystemSettings['LOGOTIP']['MODULE_ID'] = "sale";
