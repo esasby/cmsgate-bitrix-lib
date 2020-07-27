@@ -36,7 +36,7 @@ abstract class CmsgateServiceHandler extends PaySystem\ServiceHandler
 	 */
 	static public function getIndicativeFields()
 	{
-		return array('handler' => Registry::getRegistry()->getPaySystemName());
+		return array('handler' => Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName());
 	}
 
 
