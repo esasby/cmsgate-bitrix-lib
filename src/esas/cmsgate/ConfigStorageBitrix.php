@@ -8,16 +8,21 @@
 
 namespace esas\cmsgate;
 
+use Bitrix\Sale\Internals\PaySystemActionTable;
 use Exception;
 
 class ConfigStorageBitrix extends ConfigStorageCms
 {
     private $psId;
+    private $personTypeId;
 
     public function __construct()
     {
         parent::__construct();
         $this->psId = CmsConnectorBitrix::getInstance()->getPaysystemId();
+        $dbRes = PaySystemActionTable::getById($this->psId);
+        $data = $dbRes->fetch();
+        $this->personTypeId = $data['PERSON_TYPE_ID'];
     }
 
 
@@ -28,7 +33,7 @@ class ConfigStorageBitrix extends ConfigStorageCms
      */
     public function getConfig($key)
     {
-        return \Bitrix\Sale\BusinessValue::get(strtoupper($key), 'PAYSYSTEM_' . $this->psId, null);
+        return \Bitrix\Sale\BusinessValue::get(strtoupper($key), 'PAYSYSTEM_' . $this->psId, $this->personTypeId);
     }
 
     /**
