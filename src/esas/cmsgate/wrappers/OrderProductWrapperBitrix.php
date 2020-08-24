@@ -11,7 +11,7 @@ namespace esas\cmsgate\wrappers;
 use Bitrix\Sale\BasketItem;
 use esas\hutkigrosh\lang\TranslatorBitrix;
 
-class OrderProductWrapperBitrix extends OrderProductWrapper
+class OrderProductWrapperBitrix extends OrderProductSafeWrapper
 {
     private $basketItem;
 
@@ -29,7 +29,7 @@ class OrderProductWrapperBitrix extends OrderProductWrapper
      * Артикул товара
      * @return string
      */
-    public function getInvId()
+    public function getInvIdUnsafe()
     {
         return $this->basketItem->getField('ID');
     }
@@ -38,7 +38,7 @@ class OrderProductWrapperBitrix extends OrderProductWrapper
      * Название или краткое описание товара
      * @return string
      */
-    public function getName()
+    public function getNameUnsafe()
     {
         return $this->basketItem->getField('NAME');
     }
@@ -47,7 +47,7 @@ class OrderProductWrapperBitrix extends OrderProductWrapper
      * Количество товароа в корзине
      * @return mixed
      */
-    public function getCount()
+    public function getCountUnsafe()
     {
         return round($this->basketItem->getField('QUANTITY'));
     }
@@ -56,7 +56,7 @@ class OrderProductWrapperBitrix extends OrderProductWrapper
      * Цена за единицу товара
      * @return mixed
      */
-    public function getUnitPrice()
+    public function getUnitPriceUnsafe()
     {
         return $this->basketItem->getField('QUANTITY') * $this->basketItem->getField('PRICE');
     }

@@ -17,13 +17,18 @@ use Bitrix\Sale\PaySystem\Manager;
 use CFile;
 use CModule;
 use CSaleOrder;
-use esas\cmsgate\CmsConnectorBitrix;
 use esas\cmsgate\ConfigFields;
 use esas\cmsgate\messenger\MessagesBitrix;
 use esas\cmsgate\Registry;
 use Exception;
 
-
+/**
+ * ВАЖНО: при публикации в marketplace выполняется проверка, 
+ * что install/index является прямым наследником от CModule. Поэтому наследование от CmsgateCModule невозможно
+ * Вместо этого, можно создавать внутреннюю переменную CmsgateCModule и дергать методы через нее 
+ * Class CmsgateCModule
+ * @package esas\cmsgate\bitrix
+ */
 class CmsgateCModule extends CModule
 {
     const MODULE_SUB_PATH = '/php_interface/include/sale_payment/';
@@ -59,10 +64,12 @@ class CmsgateCModule extends CModule
         CModule::IncludeModule("sale");
     }
 
-    protected function addFilesToInstallList()
+    public function addFilesToInstallList($extFileList = null)
     {
         $this->installFilesList[] = self::MODULE_SUB_PATH . $this->getModuleActionName();
         $this->installFilesList[] = "/images/sale/sale_payments/" . $this->getModuleActionName() . ".png";
+        if (!is_null($extFileList))
+            $this->installFilesList = array_merge($this->installFilesList, $extFileList);
     }
 
     function InstallDB($arParams = array())
