@@ -203,7 +203,7 @@ class CmsgateCModule extends CModule
             "HAVE_ACTION" => "N",
             "HAVE_PAYMENT" => "Y",
             "HAVE_RESULT_RECEIVE" => "Y",
-            "ENCODING" => "utf-8",
+//            "ENCODING" => "utf-8", на системах с windows-1251 при установке из marketplace это приводит к двойной конвертации итоговой страницы и некорректоному отображению
             "SORT" => 100,
         );
 
