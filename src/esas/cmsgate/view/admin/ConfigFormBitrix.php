@@ -107,6 +107,9 @@ class ConfigFormBitrix extends ConfigFormArray
         return $this->orderStatuses;
     }
 
+    /**
+     * @return \esas\cmsgate\utils\htmlbuilder\Element
+     */
     public static function generateModuleDescription() {
         return element::table(
             element::tr(

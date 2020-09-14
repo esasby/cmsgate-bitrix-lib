@@ -32,7 +32,9 @@ use Exception;
 class CmsgateCModule extends CModule
 {
     const MODULE_SUB_PATH = '/php_interface/include/sale_payment/';
+    const MODULE_IMAGES_SUB_PATH = "/images/sale/sale_payments/";
     const OPTION_PAYSYSTEM_ID = "PAY_SYSTEM_ID";
+    const OPTION_INSTALLED_PAYSYSTEMS_ID = "ADDED_PAY_SYSTEM_ID";
     var $MODULE_PATH;
     var $MODULE_ID;
     var $MODULE_VERSION = '';
@@ -44,6 +46,10 @@ class CmsgateCModule extends CModule
     var $PARTNER_URI;
     private $installSrcDir;
     protected $installFilesList;
+    /**
+     * @var  CmsgatePaysystem[]
+     */
+    protected $installPaySystemsList;
 
     /**
      * CmsgateCModule constructor.
@@ -60,28 +66,55 @@ class CmsgateCModule extends CModule
         $this->PARTNER_URI = Registry::getRegistry()->getModuleDescriptor()->getVendor()->getUrl();
 
         $this->installSrcDir = $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/' . $this->MODULE_ID . '/install';
-        $this->addFilesToInstallList();
+        $this->createInstallFilesList();
+        $this->createInstallPaySystemsList();
         CModule::IncludeModule("sale");
     }
 
-    public function addFilesToInstallList($extFileList = null)
+    public function createInstallFilesList()
     {
         $this->installFilesList[] = self::MODULE_SUB_PATH . $this->getModuleActionName();
-        $this->installFilesList[] = "/images/sale/sale_payments/" . $this->getModuleActionName() . ".png";
-        if (!is_null($extFileList))
-            $this->installFilesList = array_merge($this->installFilesList, $extFileList);
+        $this->installFilesList[] = self::MODULE_IMAGES_SUB_PATH . $this->getModuleActionName() . ".png";
+    }
+
+    public function addToInstallFilesList($extFile)
+    {
+        $this->installFilesList[] = $extFile;
+        return $this;
+    }
+
+    public function createInstallPaySystemsList()
+    {
+        $mainPaySystem = new CmsgatePaysystem();
+        $mainPaySystem
+            ->setName(Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()))
+            ->setDescription(Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()))
+            ->setActionFile($this->getModuleActionName())
+            ->setType($this->getPaysystemType())
+            ->setMain(true) // основная ПС модуля, ее ID будет храниться в OPTION_PAYSYSTEM_ID
+            ->setSort(100);
+        $this->installPaySystemsList[] = $mainPaySystem;
+    }
+
+    public function addToInstallPaySystemsList($extPaySystem)
+    {
+            $this->installPaySystemsList[] = $extPaySystem;
+            return $this;
     }
 
     function InstallDB($arParams = array())
     {
         ModuleManager::RegisterModule($this->MODULE_ID);
-        $psId = $this->addPaysys();
-        if ($psId === false)
-            throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_PS_INSTALL));
-
-        //сохранение paysystemId в настройках модуля
-        Option::set($this->MODULE_ID, self::OPTION_PAYSYSTEM_ID, $psId);
-
+        foreach ($this->installPaySystemsList as $paySystem)
+        {
+            $this->addPaysys($paySystem);
+            if ($paySystem->getId() === false)
+                throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_PS_INSTALL));
+            if ($paySystem->isMain()) {
+                //сохранение paysystemId в настройках модуля
+                Option::set($this->MODULE_ID, self::OPTION_PAYSYSTEM_ID, $paySystem->getId());
+            }
+        }
         return true;
     }
 
@@ -187,16 +220,17 @@ class CmsgateCModule extends CModule
     /**
      * Первоначально тут был просто вызов Manager::Add, но в таком случае не происходит загрузка логотипа, как было в CSalePaySystem::Add
      * Поэтому взят пример кода из \Bitrix\Sale\PaySystem\Manager::createInnerPaySystem
-     * @return int
+     * @param CmsgatePaysystem $paySystem
+     * @throws Exception
      */
-    protected function addPaysys()
+    public function addPaysys(&$paySystem)
     {
         $paySystemSettings = array(
-            "NAME" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()),
-            "DESCRIPTION" => Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()),  //todo
-            "ACTION_FILE" => $this->getModuleActionName(),
-            "ACTIVE" => "N",
-            "ENTITY_REGISTRY_TYPE" => $this->getPaysystemType(), // без этого созданная платежная система не отображается в списке
+            "NAME" => $paySystem->getName(),
+            "DESCRIPTION" => $paySystem->getDescription(),
+            "ACTION_FILE" => $paySystem->getActionFile(),
+            "ACTIVE" => $paySystem->isActive()? "Y" : "N",
+            "ENTITY_REGISTRY_TYPE" => $paySystem->getType(), // без этого созданная платежная система не отображается в списке
             "NEW_WINDOW" => "N",
             "HAVE_PREPAY" => "N",
             "HAVE_RESULT" => "N",
@@ -204,11 +238,11 @@ class CmsgateCModule extends CModule
             "HAVE_PAYMENT" => "Y",
             "HAVE_RESULT_RECEIVE" => "Y",
 //            "ENCODING" => "utf-8", на системах с windows-1251 при установке из marketplace это приводит к двойной конвертации итоговой страницы и некорректоному отображению
-            "SORT" => 100,
+            "SORT" => $paySystem->getSort(),
         );
 
 
-        $imagePath = Application::getDocumentRoot() . '/bitrix/images/sale/sale_payments/' . $this->getModuleActionName() . '.png';
+        $imagePath = Application::getDocumentRoot() . '/bitrix/images/sale/sale_payments/' . $paySystem->getActionFile() . '.png';
         if (File::isFileExists($imagePath)) {
             $paySystemSettings['LOGOTIP'] = \CFile::MakeFileArray($imagePath);
             $paySystemSettings['LOGOTIP']['MODULE_ID'] = "sale";
@@ -217,10 +251,13 @@ class CmsgateCModule extends CModule
 
         $result = PaySystemActionTable::add($paySystemSettings);
 
-        if ($result->isSuccess())
-            return $result->getId();
-
-        return 0;
+        if ($result->isSuccess()) {
+            $paySystem->setId($result->getId());
+            //т.к. один плагин может добавлять сразу несколько ПС, то сохраняем идентификаторы через запятую в отдельной настройке (для возможности удаления)
+            $alreadyInstalled = explode(",", Option::get($this->MODULE_ID, self::OPTION_INSTALLED_PAYSYSTEMS_ID));
+            $alreadyInstalled[] = $paySystem->getId();
+            Option::set($this->MODULE_ID, self::OPTION_PAYSYSTEM_ID, implode(",", $alreadyInstalled));
+        }
     }
 
     protected function getPaysystemType()
@@ -234,16 +271,18 @@ class CmsgateCModule extends CModule
      */
     protected function deletePaysys()
     {
-        $psId = (int)Option::get($this->MODULE_ID, self::OPTION_PAYSYSTEM_ID);
-        if ($psId == '0')
+        $alreadyInstalled = explode(",", Option::get($this->MODULE_ID, self::OPTION_INSTALLED_PAYSYSTEMS_ID));
+        if ($alreadyInstalled == null || sizeof($alreadyInstalled) == 0)
             return false;
-        $order = CSaleOrder::GetList(array(), array("PAY_SYSTEM_ID" => $psId))->Fetch();
-        if ($order["ID"] > 0)
-            throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_ORDERS_EXIST));
-        // verify that there is a payment system to delete
-        if ($arPaySys = Manager::GetByID($psId)) {
-            if (!Manager::delete($psId))
-                throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_DELETE_EXCEPTION));
+        foreach ($alreadyInstalled as $psId){
+            $order = CSaleOrder::GetList(array(), array("PAY_SYSTEM_ID" => $psId))->Fetch();
+            if ($order["ID"] > 0)
+                throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_ORDERS_EXIST));
+            // verify that there is a payment system to delete
+            if ($arPaySys = Manager::GetByID($psId)) {
+                if (!Manager::delete($psId))
+                    throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_DELETE_EXCEPTION));
+            }
         }
         return true;
     }
