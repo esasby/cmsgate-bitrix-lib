@@ -249,7 +249,22 @@ class CmsgateCModule extends CModule
             \CFile::SaveForDB($paySystemSettings, 'LOGOTIP', 'sale/paysystem/logotip');
         }
 
-        $result = PaySystemActionTable::add($paySystemSettings);
+        $paySystemManagerResult = Manager::getList([
+            'select' => [
+                'ID'
+            ],
+            'filter' => [
+                'ACTION_FILE' => $paySystem->getActionFile(),
+                'ENTITY_REGISTRY_TYPE' => 'DELETED',
+            ],
+        ]);
+
+        $previousVersionPSId = $paySystemManagerResult->fetch();
+
+        if (!empty($previousVersionPSId) && $previousVersionPSId["ID"] > 0)
+            $result = PaySystemActionTable::update($previousVersionPSId["ID"], $paySystemSettings);
+        else
+            $result = PaySystemActionTable::add($paySystemSettings);
 
         if ($result->isSuccess()) {
             $paySystem->setId($result->getId());
@@ -277,16 +292,24 @@ class CmsgateCModule extends CModule
         if ($alreadyInstalled == null || sizeof($alreadyInstalled) == 0)
             return false;
         foreach ($alreadyInstalled as $psId) {
-            if (empty($psId) || $psId <= 0)
+            $paySystemSettings = Manager::GetByID($psId);
+            if (empty($psId) || $psId <= 0 || !$paySystemSettings)
                 continue;
             $order = CSaleOrder::GetList(array(), array("PAY_SYSTEM_ID" => $psId))->Fetch();
-            if ($order["ID"] > 0)
-                throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_ORDERS_EXIST));
-            // verify that there is a payment system to delete
-            if ($arPaySys = Manager::GetByID($psId)) {
+            if ($order["ID"] > 0) {
+                $paySystemSettingsDeleted = array(
+                    "NAME" => $paySystemSettings["NAME"] . " #DELETED",
+                    "ACTIVE" => "N",
+                    "ENTITY_REGISTRY_TYPE" => "DELETED" //любое значение кроме order и invoice
+                );
+                if (!Manager::update($psId, $paySystemSettingsDeleted))
+                    throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_DELETE_EXCEPTION));
+            } else {
+                // verify that there is a payment system to delete
                 if (!Manager::delete($psId))
                     throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_DELETE_EXCEPTION));
             }
+
         }
         return true;
     }
