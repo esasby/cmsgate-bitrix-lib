@@ -9,4 +9,5 @@ return array(
     MessagesBitrix::ERROR_ORDERS_EXIST => "Невозможно удалить платежную систему, т.к. существуют заказы с данной платёжной системой.",
     MessagesBitrix::ERROR_DELETE_EXCEPTION => "Невозможно удалить платежную систему.",
     MessagesBitrix::ERROR_PS_ACTION_REG => "Ошибка регистрации обработчиков ПСОшибка регистрации обработчиков ПС",
+    MessagesBitrix::PARENT_PS_CONFIG => "Данная платежная система использует общие настройки с системой ",
 );

@@ -11,7 +11,7 @@ class CmsgatePaysystem
     private $description;
     private $actionFile;
     private $type;
-    private $sort;
+    private $sort = 100;
     /**
      * @var boolean
      */

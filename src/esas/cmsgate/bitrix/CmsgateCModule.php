@@ -23,9 +23,9 @@ use esas\cmsgate\Registry;
 use Exception;
 
 /**
- * ВАЖНО: при публикации в marketplace выполняется проверка, 
+ * ВАЖНО: при публикации в marketplace выполняется проверка,
  * что install/index является прямым наследником от CModule. Поэтому наследование от CmsgateCModule невозможно
- * Вместо этого, можно создавать внутреннюю переменную CmsgateCModule и дергать методы через нее 
+ * Вместо этого, можно создавать внутреннюю переменную CmsgateCModule и дергать методы через нее
  * Class CmsgateCModule
  * @package esas\cmsgate\bitrix
  */
@@ -98,15 +98,14 @@ class CmsgateCModule extends CModule
 
     public function addToInstallPaySystemsList($extPaySystem)
     {
-            $this->installPaySystemsList[] = $extPaySystem;
-            return $this;
+        $this->installPaySystemsList[] = $extPaySystem;
+        return $this;
     }
 
     function InstallDB($arParams = array())
     {
         ModuleManager::RegisterModule($this->MODULE_ID);
-        foreach ($this->installPaySystemsList as $paySystem)
-        {
+        foreach ($this->installPaySystemsList as $paySystem) {
             $this->addPaysys($paySystem);
             if ($paySystem->getId() === false)
                 throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_PS_INSTALL));
@@ -213,8 +212,9 @@ class CmsgateCModule extends CModule
      * При этом символ "." недопустим
      * @return mixed
      */
-    public function getModuleActionName() {
-        return str_replace ('.', '_', Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName());
+    public function getModuleActionName()
+    {
+        return str_replace('.', '_', Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName());
     }
 
     /**
@@ -229,7 +229,7 @@ class CmsgateCModule extends CModule
             "NAME" => $paySystem->getName(),
             "DESCRIPTION" => $paySystem->getDescription(),
             "ACTION_FILE" => $paySystem->getActionFile(),
-            "ACTIVE" => $paySystem->isActive()? "Y" : "N",
+            "ACTIVE" => $paySystem->isActive() ? "Y" : "N",
             "ENTITY_REGISTRY_TYPE" => $paySystem->getType(), // без этого созданная платежная система не отображается в списке
             "NEW_WINDOW" => "N",
             "HAVE_PREPAY" => "N",
@@ -254,9 +254,11 @@ class CmsgateCModule extends CModule
         if ($result->isSuccess()) {
             $paySystem->setId($result->getId());
             //т.к. один плагин может добавлять сразу несколько ПС, то сохраняем идентификаторы через запятую в отдельной настройке (для возможности удаления)
-            $alreadyInstalled = explode(",", Option::get($this->MODULE_ID, self::OPTION_INSTALLED_PAYSYSTEMS_ID));
+            $option = Option::get($this->MODULE_ID, self::OPTION_INSTALLED_PAYSYSTEMS_ID);
+            if (!empty($option))
+                $alreadyInstalled = explode(",", $option);
             $alreadyInstalled[] = $paySystem->getId();
-            Option::set($this->MODULE_ID, self::OPTION_PAYSYSTEM_ID, implode(",", $alreadyInstalled));
+            Option::set($this->MODULE_ID, self::OPTION_INSTALLED_PAYSYSTEMS_ID, implode(",", $alreadyInstalled));
         }
     }
 
@@ -274,7 +276,9 @@ class CmsgateCModule extends CModule
         $alreadyInstalled = explode(",", Option::get($this->MODULE_ID, self::OPTION_INSTALLED_PAYSYSTEMS_ID));
         if ($alreadyInstalled == null || sizeof($alreadyInstalled) == 0)
             return false;
-        foreach ($alreadyInstalled as $psId){
+        foreach ($alreadyInstalled as $psId) {
+            if (empty($psId) || $psId <= 0)
+                continue;
             $order = CSaleOrder::GetList(array(), array("PAY_SYSTEM_ID" => $psId))->Fetch();
             if ($order["ID"] > 0)
                 throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_ORDERS_EXIST));
