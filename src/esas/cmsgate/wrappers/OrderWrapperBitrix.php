@@ -3,7 +3,9 @@
 namespace esas\cmsgate\wrappers;
 
 use Bitrix\Sale\Order;
+use Bitrix\Sale\Payment;
 use CSaleOrder;
+use esas\cmsgate\CmsConnectorBitrix;
 
 class OrderWrapperBitrix extends OrderSafeWrapper
 {
@@ -145,13 +147,22 @@ class OrderWrapperBitrix extends OrderSafeWrapper
         // TODO: Implement getClientId() method.
     }
 
+    const DB_EXT_ID_FIELD = "PS_INVOICE_ID";
+
     /**
      * BillId (идентификатор хуткигрош) успешно выставленного счета
      * @return mixed
      */
     public function getExtIdUnsafe()
     {
-        return $this->order->getField("COMMENTS"); //todo положит в какое-то именнованное поле в COMMENTS, для исключения конфликтов
+        $paymentCollection = $this->order->getPaymentCollection();
+        /** @var Payment $payment */
+        foreach ($paymentCollection as $payment)
+        {
+            if ($payment->getPaymentSystemId() == CmsConnectorBitrix::getInstance()->getPaysystemId()) {
+                return $payment->getField(self::DB_EXT_ID_FIELD);
+            }
+        }
     }
 
     /**
@@ -160,8 +171,15 @@ class OrderWrapperBitrix extends OrderSafeWrapper
      */
     public function saveExtId($extId)
     {
-        CSaleOrder::Update($this->getOrderId(), array("COMMENTS" => $extId));
-//        $collection = $this->order->getPaymentCollection(); // в идеале, надо сохранять в платежах, а не в заказе
-        $this->order->setField("COMMENTS", $extId);
+        $paymentCollection = $this->order->getPaymentCollection();
+        /** @var Payment $payment */
+        foreach ($paymentCollection as $payment)
+        {
+            if ($payment->getPaymentSystemId() == CmsConnectorBitrix::getInstance()->getPaysystemId()) {
+                $payment->setField(self::DB_EXT_ID_FIELD, $extId);
+                $this->order->save();
+                break;
+            }
+        }
     }
 }

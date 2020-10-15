@@ -84,18 +84,22 @@ class CmsConnectorBitrix extends CmsConnector
         return new OrderWrapperBitrix($orderByAccount);
     }
 
+    //todo chack
     public function createOrderWrapperByExtId($extId)
     {
+
         $parameters = [
+            'select' => ['ORDER_ID'],
             'filter' => [
-                "COMMENTS" => $extId
+                '=' . OrderWrapperBitrix::DB_EXT_ID_FIELD => $extId
             ]
         ];
-        $dbRes = Order::loadByFilter($parameters);
-        if ($dbRes == null || count($dbRes) != 1)
+        $dbRes = \Bitrix\Crm\Order\PaymentCollection::getList($parameters);
+        $orderIdsArray = $dbRes->fetch();
+        if ($orderIdsArray == null || count($orderIdsArray) != 1)
             return null;
         else
-            return new OrderWrapperBitrix($dbRes[0]); //todo check
+            return $this->createOrderWrapperByOrderId($orderIdsArray[0]);
     }
 
     public function createConfigStorage()
@@ -113,8 +117,8 @@ class CmsConnectorBitrix extends CmsConnector
         return new CmsConnectorDescriptor(
             "cmsgate-bitrix-lib",
             new VersionDescriptor(
-                "v1.13.2",
-                "2020-09-16"
+                "v1.13.3",
+                "2020-10-15"
             ),
             "Cmsgate Bitrix connector",
             "https://bitbucket.esas.by/projects/CG/repos/cmsgate-bitrix-lib/browse",

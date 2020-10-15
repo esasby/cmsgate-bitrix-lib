@@ -10,16 +10,8 @@ namespace esas\cmsgate;
 
 
 use Bitrix\Crm\Invoice\Invoice;
-use Bitrix\Sale\Order;
-use CSaleOrder;
-use esas\cmsgate\descriptors\CmsConnectorDescriptor;
-use esas\cmsgate\descriptors\VendorDescriptor;
-use esas\cmsgate\descriptors\VersionDescriptor;
-use esas\cmsgate\lang\LocaleLoaderBitrix;
-use esas\cmsgate\view\admin\AdminViewFields;
 use esas\cmsgate\wrappers\OrderWrapper;
 use esas\cmsgate\wrappers\OrderWrapperBitrix;
-use esas\cmsgate\wrappers\OrderWrapperBitrix24;
 
 class CmsConnectorBitrix24 extends CmsConnectorBitrix
 {
@@ -41,7 +33,7 @@ class CmsConnectorBitrix24 extends CmsConnectorBitrix
     public function createOrderWrapperByOrderId($orderId)
     {
         $bitrixOrder = Invoice::load($orderId);
-        return new OrderWrapperBitrix24($bitrixOrder);
+        return new OrderWrapperBitrix($bitrixOrder);
     }
 
     public function createOrderWrapperByOrderNumber($orderNumber)
@@ -49,20 +41,24 @@ class CmsConnectorBitrix24 extends CmsConnectorBitrix
         $orderByAccount = Invoice::loadByAccountNumber($orderNumber);
         if ($orderByAccount == null)
             $orderByAccount = Invoice::load($orderNumber);
-        return new OrderWrapperBitrix24($orderByAccount);
+        return new OrderWrapperBitrix($orderByAccount);
     }
 
+    //todo chack
     public function createOrderWrapperByExtId($extId)
     {
+
         $parameters = [
+            'select' => ['ORDER_ID'],
             'filter' => [
-                "COMMENTS" => $extId
+                '=' . OrderWrapperBitrix::DB_EXT_ID_FIELD => $extId
             ]
         ];
-        $dbRes = Invoice::loadByFilter($parameters);
-        if ($dbRes == null || count($dbRes) != 1)
+        $dbRes = \Bitrix\Sale\PaymentCollection::getList($parameters);
+        $orderIdsArray = $dbRes->fetch();
+        if ($orderIdsArray == null || count($orderIdsArray) != 1)
             return null;
         else
-            return new OrderWrapperBitrix24($dbRes[0]); //todo check
+            return $this->createOrderWrapperByOrderId($orderIdsArray[0]);
     }
 }
