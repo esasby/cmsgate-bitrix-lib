@@ -58,6 +58,6 @@ class OrderProductWrapperBitrix extends OrderProductSafeWrapper
      */
     public function getUnitPriceUnsafe()
     {
-        return $this->basketItem->getField('QUANTITY') * $this->basketItem->getField('PRICE');
+        return $this->basketItem->getField('PRICE');
     }
 }
