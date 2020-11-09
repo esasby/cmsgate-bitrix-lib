@@ -13,7 +13,6 @@ class OrderWrapperBitrix extends OrderSafeWrapper
     protected $products;
 
     /**
-     * OrderWrapperJoomshopping constructor.
      * @param $order
      */
     public function __construct(Order $order)

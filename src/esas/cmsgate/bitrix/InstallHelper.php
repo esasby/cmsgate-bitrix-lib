@@ -10,6 +10,7 @@ namespace esas\cmsgate\bitrix;
 
 use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
+use Bitrix\Main\EventManager;
 use Bitrix\Main\IO\File;
 use Bitrix\Main\ModuleManager;
 use Bitrix\Sale\Internals\PaySystemActionTable;
@@ -17,6 +18,7 @@ use Bitrix\Sale\PaySystem\Manager;
 use CFile;
 use CModule;
 use CSaleOrder;
+use esas\cmsgate\CmsConnectorBitrix;
 use esas\cmsgate\ConfigFields;
 use esas\cmsgate\messenger\MessagesBitrix;
 use esas\cmsgate\Registry;
@@ -24,57 +26,41 @@ use Exception;
 
 /**
  * ВАЖНО: при публикации в marketplace выполняется проверка,
- * что install/index является прямым наследником от CModule. Поэтому наследование от CmsgateCModule невозможно
- * Вместо этого, можно создавать внутреннюю переменную CmsgateCModule и дергать методы через нее
- * Class CmsgateCModule
+ * что install/index является прямым наследником от CModule. Поэтому наследование от InstallHelper невозможно
+ * Вместо этого, можно создавать внутреннюю переменную InstallHelper и дергать методы через нее
+ * Class InstallHelper
  * @package esas\cmsgate\bitrix
  */
-class CmsgateCModule extends CModule
+class InstallHelper
 {
     const MODULE_SUB_PATH = '/php_interface/include/sale_payment/';
     const MODULE_IMAGES_SUB_PATH = "/images/sale/sale_payments/";
     const OPTION_PAYSYSTEM_ID = "PAY_SYSTEM_ID";
     const OPTION_INSTALLED_PAYSYSTEMS_ID = "ADDED_PAY_SYSTEM_ID";
-    var $MODULE_PATH;
-    var $MODULE_ID;
-    var $MODULE_VERSION = '';
-    var $MODULE_VERSION_DATE;
-    var $MODULE_NAME;
-    var $MODULE_DESCRIPTION;
-    var $MODULE_GROUP_RIGHTS = 'Y';
-    var $PARTNER_NAME;
-    var $PARTNER_URI;
+
+    private $moduleId;
     private $installSrcDir;
     protected $installFilesList;
+
+
+    /**
+     * @var CModule
+     */
+    protected $managedCModule;
     /**
      * @var  CmsgatePaysystem[]
      */
     protected $installPaySystemsList;
 
     /**
-     * CmsgateCModule constructor.
+     * InstallHelper constructor.
      */
-    public function __construct()
+    public function __construct(CModule $managedCModule)
     {
-        $this->MODULE_ID = Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName();
-        $this->MODULE_PATH = $_SERVER['DOCUMENT_ROOT'] . '/bitrix' . self::MODULE_SUB_PATH . $this->getModuleActionName();
-        $this->MODULE_VERSION = Registry::getRegistry()->getModuleDescriptor()->getVersion()->getVersion();
-        $this->MODULE_VERSION_DATE = Registry::getRegistry()->getModuleDescriptor()->getVersion()->getDate();
-        $this->MODULE_NAME = Registry::getRegistry()->getModuleDescriptor()->getModuleFullName();
-        $this->MODULE_DESCRIPTION = Registry::getRegistry()->getModuleDescriptor()->getModuleDescription();
-        $this->PARTNER_NAME = Registry::getRegistry()->getModuleDescriptor()->getVendor()->getFullName();
-        $this->PARTNER_URI = Registry::getRegistry()->getModuleDescriptor()->getVendor()->getUrl();
-
-        $this->installSrcDir = $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/' . $this->MODULE_ID . '/install';
-        $this->createInstallFilesList();
-        $this->createInstallPaySystemsList();
+        $this->managedCModule = $managedCModule;
+        $this->moduleId = Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName();
+        $this->installSrcDir = $_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/' . $this->moduleId . '/install';
         CModule::IncludeModule("sale");
-    }
-
-    public function createInstallFilesList()
-    {
-        $this->installFilesList[] = self::MODULE_SUB_PATH . $this->getModuleActionName();
-        $this->installFilesList[] = self::MODULE_IMAGES_SUB_PATH . $this->getModuleActionName() . ".png";
     }
 
     public function addToInstallFilesList($extFile)
@@ -83,38 +69,48 @@ class CmsgateCModule extends CModule
         return $this;
     }
 
-    public function createInstallPaySystemsList()
+    public function createMainPaySystem()
     {
         $mainPaySystem = new CmsgatePaysystem();
         $mainPaySystem
             ->setName(Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()))
             ->setDescription(Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()))
-            ->setActionFile($this->getModuleActionName())
+            ->setActionFile(CmsConnectorBitrix::getInstance()->getModuleActionName())
             ->setType($this->getPaysystemType())
             ->setMain(true) // основная ПС модуля, ее ID будет храниться в OPTION_PAYSYSTEM_ID
             ->setSort(100);
-        $this->installPaySystemsList[] = $mainPaySystem;
+        return $mainPaySystem;
     }
 
-    public function addToInstallPaySystemsList($extPaySystem)
+    public function createAndAddMainPaySystem() {
+        $mainPaySystem = $this->createMainPaySystem();
+        $this->addToInstallPaySystemsList($mainPaySystem);
+    }
+
+    public function addToInstallPaySystemsList(CmsgatePaysystem $extPaySystem, $addFiles = true)
     {
         $this->installPaySystemsList[] = $extPaySystem;
+        if ($addFiles) {
+            $this->addToInstallFilesList(CmsgateCModule::MODULE_SUB_PATH . $extPaySystem->getActionFile());
+            $this->addToInstallFilesList(CmsgateCModule::MODULE_IMAGES_SUB_PATH . $extPaySystem->getActionFile() . ".png");
+        }
         return $this;
     }
 
     function InstallDB($arParams = array())
     {
-        ModuleManager::RegisterModule($this->MODULE_ID);
+        ModuleManager::RegisterModule($this->moduleId);
         foreach ($this->installPaySystemsList as $paySystem) {
             $this->addPaysys($paySystem);
             if ($paySystem->getId() === false)
                 throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_PS_INSTALL));
             if ($paySystem->isMain()) {
                 //сохранение paysystemId в настройках модуля
-                Option::set($this->MODULE_ID, self::OPTION_PAYSYSTEM_ID, $paySystem->getId());
+                Option::set($this->moduleId, self::OPTION_PAYSYSTEM_ID, $paySystem->getId());
             }
         }
-        return true;
+        if ($this->managedCModule != null)
+            $this->managedCModule->InstallDB();
     }
 
     /**
@@ -125,19 +121,26 @@ class CmsgateCModule extends CModule
     function UnInstallDB($arParams = array())
     {
         $this->deletePaysys();
-        Option::delete($this->MODULE_ID);
-        ModuleManager::UnRegisterModule($this->MODULE_ID);
-        return true;
+        Option::delete($this->moduleId);
+        ModuleManager::UnRegisterModule($this->moduleId);
+        if ($this->managedCModule != null)
+            $this->managedCModule->UnInstallDB();
     }
 
     function InstallEvents()
     {
-        return true;
+        $eventManager = EventManager::getInstance();
+        $eventManager->registerEventHandler('sale', 'OnGetBusinessValueGroups', $this->moduleId, CmsgateEventHandler::class, 'onGetBusValueGroups');
+        if ($this->managedCModule != null)
+            $this->managedCModule->InstallEvents();
     }
 
     function UnInstallEvents()
     {
-        return true;
+        $eventManager = EventManager::getInstance();
+        $eventManager->unRegisterEventHandler('sale', 'OnGetBusinessValueGroups', $this->moduleId, CmsgateEventHandler::class, 'onGetBusValueGroups');
+        if ($this->managedCModule != null)
+            $this->managedCModule->UnInstallEvents();
     }
 
 
@@ -159,7 +162,8 @@ class CmsgateCModule extends CModule
             }
             CopyDirFiles($from, $to, true, true);
         }
-        return true;
+        if ($this->managedCModule != null)
+            $this->managedCModule->InstallFiles();
     }
 
     function UnInstallFiles()
@@ -167,7 +171,8 @@ class CmsgateCModule extends CModule
         foreach ($this->installFilesList as $fileToDelete) {
             DeleteDirFilesEx('/bitrix' . $fileToDelete);
         }
-        return true;
+        if ($this->managedCModule != null)
+            $this->managedCModule->UnInstallFiles();
     }
 
     function DoInstall()
@@ -202,19 +207,6 @@ class CmsgateCModule extends CModule
             $GLOBALS["APPLICATION"]->ThrowException($e->getMessage());
             return false;
         }
-    }
-
-    /**
-     * В bitrix есть однозначная связка между:
-     * - именем директории в php_interface\include\sale_payment\
-     * - именем класса в handler.php
-     * - ACTION_FILE в БД в таблице b_sale_pay_system_action
-     * При этом символ "." недопустим
-     * @return mixed
-     */
-    public function getModuleActionName()
-    {
-        return str_replace('.', '_', Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName());
     }
 
     /**
@@ -269,11 +261,11 @@ class CmsgateCModule extends CModule
         if ($result->isSuccess()) {
             $paySystem->setId($result->getId());
             //т.к. один плагин может добавлять сразу несколько ПС, то сохраняем идентификаторы через запятую в отдельной настройке (для возможности удаления)
-            $option = Option::get($this->MODULE_ID, self::OPTION_INSTALLED_PAYSYSTEMS_ID);
+            $option = Option::get($this->moduleId, self::OPTION_INSTALLED_PAYSYSTEMS_ID);
             if (!empty($option))
                 $alreadyInstalled = explode(",", $option);
             $alreadyInstalled[] = $paySystem->getId();
-            Option::set($this->MODULE_ID, self::OPTION_INSTALLED_PAYSYSTEMS_ID, implode(",", $alreadyInstalled));
+            Option::set($this->moduleId, self::OPTION_INSTALLED_PAYSYSTEMS_ID, implode(",", $alreadyInstalled));
         }
     }
 
@@ -288,7 +280,7 @@ class CmsgateCModule extends CModule
      */
     protected function deletePaysys()
     {
-        $alreadyInstalled = explode(",", Option::get($this->MODULE_ID, self::OPTION_INSTALLED_PAYSYSTEMS_ID));
+        $alreadyInstalled = explode(",", Option::get($this->moduleId, self::OPTION_INSTALLED_PAYSYSTEMS_ID));
         if ($alreadyInstalled == null || sizeof($alreadyInstalled) == 0)
             return false;
         foreach ($alreadyInstalled as $psId) {

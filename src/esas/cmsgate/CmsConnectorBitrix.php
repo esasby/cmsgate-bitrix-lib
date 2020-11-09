@@ -12,7 +12,7 @@ namespace esas\cmsgate;
 use Bitrix\Main\Config\Option;
 use Bitrix\Sale\Order;
 use CSaleOrder;
-use esas\cmsgate\bitrix\CmsgateCModule;
+use esas\cmsgate\bitrix\InstallHelper;
 use esas\cmsgate\descriptors\CmsConnectorDescriptor;
 use esas\cmsgate\descriptors\VendorDescriptor;
 use esas\cmsgate\descriptors\VersionDescriptor;
@@ -44,7 +44,7 @@ class CmsConnectorBitrix extends CmsConnector
 
     public function getPaysystemId()
     {
-        return (int)Option::get(Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(), CmsgateCModule::OPTION_PAYSYSTEM_ID);
+        return (int)Option::get(Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(), InstallHelper::OPTION_PAYSYSTEM_ID);
     }
 
     /**
@@ -100,6 +100,19 @@ class CmsConnectorBitrix extends CmsConnector
             return null;
         else
             return $this->createOrderWrapperByOrderId($orderIdsArray[0]);
+    }
+
+    /**
+     * В bitrix есть однозначная связка между:
+     * - именем директории в php_interface\include\sale_payment\
+     * - именем класса в handler.php
+     * - ACTION_FILE в БД в таблице b_sale_pay_system_action
+     * При этом символ "." недопустим
+     * @return mixed
+     */
+    public function getModuleActionName()
+    {
+        return str_replace('.', '_', Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName());
     }
 
     public function createConfigStorage()
