@@ -6,6 +6,7 @@ use Bitrix\Sale\Order;
 use Bitrix\Sale\Payment;
 use CSaleOrder;
 use esas\cmsgate\CmsConnectorBitrix;
+use Throwable;
 
 class OrderWrapperBitrix extends OrderSafeWrapper
 {
@@ -90,6 +91,11 @@ class OrderWrapperBitrix extends OrderSafeWrapper
         return $this->order->getPrice();
     }
 
+
+    public function getShippingAmountUnsafe()
+    {
+        return $this->order->getDeliveryPrice();
+    }
     /**
      * Валюта заказа (буквенный код)
      * @return string
