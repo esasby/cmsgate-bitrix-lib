@@ -91,8 +91,8 @@ class InstallHelper
     {
         $this->installPaySystemsList[] = $extPaySystem;
         if ($addFiles) {
-            $this->addToInstallFilesList(CmsgateCModule::MODULE_SUB_PATH . $extPaySystem->getActionFile());
-            $this->addToInstallFilesList(CmsgateCModule::MODULE_IMAGES_SUB_PATH . $extPaySystem->getActionFile() . ".png");
+            $this->addToInstallFilesList(self::MODULE_SUB_PATH . $extPaySystem->getActionFile());
+            $this->addToInstallFilesList(self::MODULE_IMAGES_SUB_PATH . $extPaySystem->getActionFile() . ".png");
         }
         return $this;
     }
