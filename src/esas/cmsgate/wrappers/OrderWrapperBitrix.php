@@ -108,7 +108,7 @@ class OrderWrapperBitrix extends OrderSafeWrapper
 
     /**
      * Массив товаров в заказе
-     * @return \esas\hutkigrosh\wrappers\OrderProductWrapper[]
+     * @return \esas\cmsgate\wrappers\OrderProductWrapperBitrix[]
      */
     public function getProductsUnsafe()
     {

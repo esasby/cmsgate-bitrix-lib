@@ -11,6 +11,7 @@ namespace esas\cmsgate;
 
 use Bitrix\Main\Config\Option;
 use Bitrix\Sale\Order;
+use Bitrix\Sale\PaymentCollection;
 use CSaleOrder;
 use esas\cmsgate\bitrix\InstallHelper;
 use esas\cmsgate\descriptors\CmsConnectorDescriptor;
@@ -94,7 +95,7 @@ class CmsConnectorBitrix extends CmsConnector
                 '=' . OrderWrapperBitrix::DB_EXT_ID_FIELD => $extId
             ]
         ];
-        $dbRes = \Bitrix\Crm\Order\PaymentCollection::getList($parameters);
+        $dbRes = PaymentCollection::getList($parameters);
         $orderIdsArray = $dbRes->fetch();
         if ($orderIdsArray == null || count($orderIdsArray) != 1)
             return null;
@@ -130,8 +131,8 @@ class CmsConnectorBitrix extends CmsConnector
         return new CmsConnectorDescriptor(
             "cmsgate-bitrix-lib",
             new VersionDescriptor(
-                "v1.14.1",
-                "2020-11-10"
+                "v1.14.2",
+                "2021-01-14"
             ),
             "Cmsgate Bitrix connector",
             "https://bitbucket.esas.by/projects/CG/repos/cmsgate-bitrix-lib/browse",

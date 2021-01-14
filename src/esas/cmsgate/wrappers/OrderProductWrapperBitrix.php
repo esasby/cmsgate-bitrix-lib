@@ -9,7 +9,6 @@
 namespace esas\cmsgate\wrappers;
 
 use Bitrix\Sale\BasketItem;
-use esas\hutkigrosh\lang\TranslatorBitrix;
 
 class OrderProductWrapperBitrix extends OrderProductSafeWrapper
 {
