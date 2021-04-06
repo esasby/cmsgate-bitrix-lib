@@ -161,10 +161,11 @@ class OrderWrapperBitrix extends OrderSafeWrapper
     public function getExtIdUnsafe()
     {
         $paymentCollection = $this->order->getPaymentCollection();
+        $installedPaysystemsIds = CmsConnectorBitrix::getInstance()->getInstalledPaysystemsIds();
         /** @var Payment $payment */
         foreach ($paymentCollection as $payment)
         {
-            if ($payment->getPaymentSystemId() == CmsConnectorBitrix::getInstance()->getPaysystemId()) {
+            if (in_array($payment->getPaymentSystemId(), $installedPaysystemsIds)) {
                 return $payment->getField(self::DB_EXT_ID_FIELD);
             }
         }
@@ -177,10 +178,11 @@ class OrderWrapperBitrix extends OrderSafeWrapper
     public function saveExtId($extId)
     {
         $paymentCollection = $this->order->getPaymentCollection();
+        $installedPaysystemsIds = CmsConnectorBitrix::getInstance()->getInstalledPaysystemsIds();
         /** @var Payment $payment */
         foreach ($paymentCollection as $payment)
         {
-            if ($payment->getPaymentSystemId() == CmsConnectorBitrix::getInstance()->getPaysystemId()) {
+            if (in_array($payment->getPaymentSystemId(), $installedPaysystemsIds)) {
                 $payment->setField(self::DB_EXT_ID_FIELD, $extId);
                 $this->order->save();
                 break;

@@ -48,6 +48,14 @@ class CmsConnectorBitrix extends CmsConnector
         return (int)Option::get(Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(), InstallHelper::OPTION_PAYSYSTEM_ID);
     }
 
+    public function getInstalledPaysystemsIds()
+    {
+        $option = Option::get(Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(), InstallHelper::OPTION_INSTALLED_PAYSYSTEMS_ID);
+        if (!empty($option))
+            return explode(",", $option);
+        return array();
+    }
+
     /**
      * По локальному id заказа возвращает wrapper
      * @param $orderId
@@ -65,7 +73,7 @@ class CmsConnectorBitrix extends CmsConnector
         global $USER;
         $orderId = $GLOBALS['ORDER_ID'];
         if (!isset($orderId) || $orderId == '') {
-            $arFilter = Array(
+            $arFilter = array(
                 "USER_ID" => $USER->GetID(),
             );
             $db_sales = CSaleOrder::GetList(array(), $arFilter);
@@ -131,8 +139,8 @@ class CmsConnectorBitrix extends CmsConnector
         return new CmsConnectorDescriptor(
             "cmsgate-bitrix-lib",
             new VersionDescriptor(
-                "v1.14.2",
-                "2021-01-14"
+                "v1.14.3",
+                "2021-04-06"
             ),
             "Cmsgate Bitrix connector",
             "https://bitbucket.esas.by/projects/CG/repos/cmsgate-bitrix-lib/browse",
@@ -141,7 +149,8 @@ class CmsConnectorBitrix extends CmsConnector
         );
     }
 
-    public function getCurrentEncoding() {
-        return (defined("LANG_CHARSET")? LANG_CHARSET : "utf-8");
+    public function getCurrentEncoding()
+    {
+        return (defined("LANG_CHARSET") ? LANG_CHARSET : "utf-8");
     }
 }
