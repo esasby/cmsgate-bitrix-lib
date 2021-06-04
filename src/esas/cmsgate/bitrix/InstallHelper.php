@@ -236,9 +236,9 @@ class InstallHelper
 
         $imagePath = Application::getDocumentRoot() . '/bitrix/images/sale/sale_payments/' . $paySystem->getActionFile() . '.png';
         if (File::isFileExists($imagePath)) {
-            $paySystemSettings['LOGOTIP'] = \CFile::MakeFileArray($imagePath);
+            $paySystemSettings['LOGOTIP'] = CFile::MakeFileArray($imagePath);
             $paySystemSettings['LOGOTIP']['MODULE_ID'] = "sale";
-            \CFile::SaveForDB($paySystemSettings, 'LOGOTIP', 'sale/paysystem/logotip');
+            CFile::SaveForDB($paySystemSettings, 'LOGOTIP', 'sale/paysystem/logotip');
         }
 
         $paySystemManagerResult = Manager::getList([
