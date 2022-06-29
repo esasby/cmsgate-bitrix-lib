@@ -139,8 +139,8 @@ class CmsConnectorBitrix extends CmsConnector
         return new CmsConnectorDescriptor(
             "cmsgate-bitrix-lib",
             new VersionDescriptor(
-                "v1.14.5",
-                "2021-06-04"
+                "v1.17.0",
+                "2022-06-29"
             ),
             "Cmsgate Bitrix connector",
             "https://bitbucket.esas.by/projects/CG/repos/cmsgate-bitrix-lib/browse",

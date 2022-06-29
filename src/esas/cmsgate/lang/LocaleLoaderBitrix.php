@@ -12,6 +12,10 @@ use \Bitrix\Main\Context;
 
 class LocaleLoaderBitrix extends LocaleLoaderCms
 {
+    public function __construct()
+    {
+        $this->addExtraVocabularyDir(dirname(__FILE__));
+    }
 
     public function getLocale()
     {
@@ -21,11 +25,5 @@ class LocaleLoaderBitrix extends LocaleLoaderCms
         } else {
             $this->locale = "ru_RU";
         }
-    }
-
-
-    public function getCmsVocabularyDir()
-    {
-        return dirname(__FILE__);
     }
 }

@@ -6,6 +6,8 @@ use Bitrix\Sale\Order;
 use Bitrix\Sale\Payment;
 use CSaleOrder;
 use esas\cmsgate\CmsConnectorBitrix;
+use esas\cmsgate\OrderStatus;
+use esas\cmsgate\utils\CMSGateException;
 use Throwable;
 
 class OrderWrapperBitrix extends OrderSafeWrapper
@@ -126,20 +128,22 @@ class OrderWrapperBitrix extends OrderSafeWrapper
      */
     public function getStatusUnsafe()
     {
-        return $this->order->getField("STATUS_ID");
+        return new OrderStatus(
+            $this->order->getField("STATUS_ID"),
+            $this->order->getField("STATUS_ID"));
     }
 
     /**
      * Обновляет статус заказа в БД
-     * @param $newStatus
+     * @param OrderStatus $newStatus
      * @return mixed
      * @throws \Bitrix\Main\ArgumentException
      */
     public function updateStatus($newStatus)
     {
-        if (!empty($newStatus) && $this->getStatus() != $newStatus) {
-            CSaleOrder::Update($this->getOrderId(), array("STATUS_ID" => $newStatus));
-            $this->order->setField("STATUS_ID", $newStatus);
+        if (!empty($newStatus) && $this->getStatus() != $newStatus->getOrderStatus()) {
+            CSaleOrder::Update($this->getOrderId(), array("STATUS_ID" => $newStatus->getOrderStatus()));
+            $this->order->setField("STATUS_ID", $newStatus->getOrderStatus());
         }
     }
 
@@ -161,14 +165,22 @@ class OrderWrapperBitrix extends OrderSafeWrapper
     public function getExtIdUnsafe()
     {
         $paymentCollection = $this->order->getPaymentCollection();
+        if (!is_array($paymentCollection) && sizeof($paymentCollection) == 0)
+            throw new CMSGateException("PaymentCollection is empty");
         $installedPaysystemsIds = CmsConnectorBitrix::getInstance()->getInstalledPaysystemsIds();
+        if (!is_array($installedPaysystemsIds) && sizeof($installedPaysystemsIds) == 0)
+            throw new CMSGateException("InstalledPaysystemsIds is empty");
         /** @var Payment $payment */
         foreach ($paymentCollection as $payment)
         {
             if (in_array($payment->getPaymentSystemId(), $installedPaysystemsIds)) {
-                return $payment->getField(self::DB_EXT_ID_FIELD);
+                $extId = $payment->getField(self::DB_EXT_ID_FIELD);
+                if ($extId == null || $extId == '')
+                    throw new CMSGateException(self::DB_EXT_ID_FIELD . " is not filled");
+                return $extId;
             }
         }
+        throw new CMSGateException("No payment was found for order");
     }
 
     /**
@@ -178,7 +190,11 @@ class OrderWrapperBitrix extends OrderSafeWrapper
     public function saveExtId($extId)
     {
         $paymentCollection = $this->order->getPaymentCollection();
+        if (!is_array($paymentCollection) && sizeof($paymentCollection) == 0)
+            throw new CMSGateException("PaymentCollection is empty");
         $installedPaysystemsIds = CmsConnectorBitrix::getInstance()->getInstalledPaysystemsIds();
+        if (!is_array($installedPaysystemsIds) && sizeof($installedPaysystemsIds) == 0)
+            throw new CMSGateException("InstalledPaysystemsIds is empty");
         /** @var Payment $payment */
         foreach ($paymentCollection as $payment)
         {
@@ -188,5 +204,6 @@ class OrderWrapperBitrix extends OrderSafeWrapper
                 break;
             }
         }
+        throw new CMSGateException("No payment was found for order");
     }
 }
