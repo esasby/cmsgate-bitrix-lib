@@ -79,7 +79,7 @@ class OrderWrapperBitrix extends OrderSafeWrapper
         if ($address == null)
             $address = $this->order->getPropertyCollection()->getDeliveryLocation();
         if ($address != null)
-            $address->getValue();
+            return $address->getValue();
         else
             return "";
     }
@@ -98,6 +98,7 @@ class OrderWrapperBitrix extends OrderSafeWrapper
     {
         return $this->order->getDeliveryPrice();
     }
+
     /**
      * Валюта заказа (буквенный код)
      * @return string
@@ -171,8 +172,7 @@ class OrderWrapperBitrix extends OrderSafeWrapper
         if (!is_array($installedPaysystemsIds) && sizeof($installedPaysystemsIds) == 0)
             throw new CMSGateException("InstalledPaysystemsIds is empty");
         /** @var Payment $payment */
-        foreach ($paymentCollection as $payment)
-        {
+        foreach ($paymentCollection as $payment) {
             if (in_array($payment->getPaymentSystemId(), $installedPaysystemsIds)) {
                 $extId = $payment->getField(self::DB_EXT_ID_FIELD);
                 if ($extId == null || $extId == '')
@@ -195,15 +195,17 @@ class OrderWrapperBitrix extends OrderSafeWrapper
         $installedPaysystemsIds = CmsConnectorBitrix::getInstance()->getInstalledPaysystemsIds();
         if (!is_array($installedPaysystemsIds) && sizeof($installedPaysystemsIds) == 0)
             throw new CMSGateException("InstalledPaysystemsIds is empty");
+        $paymentWasFound = false;
         /** @var Payment $payment */
-        foreach ($paymentCollection as $payment)
-        {
+        foreach ($paymentCollection as $payment) {
             if (in_array($payment->getPaymentSystemId(), $installedPaysystemsIds)) {
                 $payment->setField(self::DB_EXT_ID_FIELD, $extId);
                 $this->order->save();
+                $paymentWasFound = true;
                 break;
             }
         }
-        throw new CMSGateException("No payment was found for order");
+        if (!$paymentWasFound)
+            throw new CMSGateException("No payment was found for order");
     }
 }
