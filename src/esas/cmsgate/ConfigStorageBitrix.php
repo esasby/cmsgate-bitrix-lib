@@ -8,21 +8,27 @@
 
 namespace esas\cmsgate;
 
-use Bitrix\Sale\Internals\PaySystemActionTable;
+use Bitrix\Sale\PaySystem\Manager;
+use Bitrix\Sale\PaySystem\Service;
 use Exception;
 
 class ConfigStorageBitrix extends ConfigStorageCms
 {
-    private $psId;
-    private $personTypeId;
+    private $paymentSystems;
 
     public function __construct()
     {
         parent::__construct();
-        $this->psId = CmsConnectorBitrix::getInstance()->getPaysystemId();
-        $dbRes = PaySystemActionTable::getById($this->psId);
-        $data = $dbRes->fetch();
-        $this->personTypeId = $data['PERSON_TYPE_ID'];
+
+        $paySystemManagerResult = Manager::getList([
+            'select' => [
+                'PAY_SYSTEM_ID', "PERSON_TYPE_ID"
+            ],
+            'filter' => [
+                'ACTION_FILE' => CmsConnectorBitrix::getInstance()->getInstalledHandlers(),
+            ],
+        ]);
+        $this->paymentSystems = $paySystemManagerResult->fetch();
     }
 
 
@@ -33,7 +39,22 @@ class ConfigStorageBitrix extends ConfigStorageCms
      */
     public function getConfig($key)
     {
-        return \Bitrix\Sale\BusinessValue::get(strtoupper($key), 'PAYSYSTEM_' . $this->psId, $this->personTypeId);
+//        /** @var Service $paymentSystem */
+//        foreach (CmsConnectorBitrix::getInstance()->getServedPaymentSystems() as $paymentSystem) {
+//            $option = \Bitrix\Sale\BusinessValue::get(strtoupper($key),
+//                'PAYSYSTEM_' . $paymentSystem->getField("PAY_SYSTEM_ID"),
+//                $paymentSystem->getField("PERSON_TYPE_ID"));
+//            if ($option != null && $option != '')
+//                break;
+//        }
+        foreach ($this->paymentSystems as $paymentSystem) {
+            $option = \Bitrix\Sale\BusinessValue::get(strtoupper($key),
+                'PAYSYSTEM_' . $paymentSystem["PAY_SYSTEM_ID"],
+                $paymentSystem["PERSON_TYPE_ID"]);
+            if ($option != null && $option != '')
+                break;
+        }
+        return $option;
     }
 
     /**

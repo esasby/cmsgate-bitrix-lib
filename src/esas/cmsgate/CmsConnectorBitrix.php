@@ -18,6 +18,7 @@ use esas\cmsgate\descriptors\CmsConnectorDescriptor;
 use esas\cmsgate\descriptors\VendorDescriptor;
 use esas\cmsgate\descriptors\VersionDescriptor;
 use esas\cmsgate\lang\LocaleLoaderBitrix;
+use esas\cmsgate\utils\CMSGateException;
 use esas\cmsgate\wrappers\OrderWrapper;
 use esas\cmsgate\wrappers\OrderWrapperBitrix;
 
@@ -43,18 +44,41 @@ class CmsConnectorBitrix extends CmsConnector
         return null; // not implemented
     }
 
-    public function getPaysystemId()
+    /**
+     * @return array|false|string[]
+     */
+    public function getInstalledHandlers()
     {
-        return (int)Option::get(Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(), InstallHelper::OPTION_PAYSYSTEM_ID);
-    }
-
-    public function getInstalledPaysystemsIds()
-    {
-        $option = Option::get(Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(), InstallHelper::OPTION_INSTALLED_PAYSYSTEMS_ID);
+        $option = Option::get(Registry::getRegistry()->getModuleDescriptor()->getModuleMachineName(), InstallHelper::OPTION_INSTALLED_HANDLERS);
         if (!empty($option))
             return explode(",", $option);
         return array();
     }
+
+    /** @var \Bitrix\Sale\PaySystem\Service $paymentSystem */
+    public function isServedPaymentSystem($paymentSystem) {
+        $installedHandlers = CmsConnectorBitrix::getInstance()->getInstalledHandlers();
+        if (!is_array($installedHandlers) && sizeof($installedHandlers) == 0)
+            throw new CMSGateException("Installed handler list OPTION is empty");
+        if (in_array($paymentSystem->getField("ACTION_FILE"), $installedHandlers)) {
+            return true;
+        }
+        return false;
+    }
+
+//    /**
+//     * @return \Bitrix\Sale\PaySystem\Service[]
+//     */
+//    public function getServedPaymentSystems() {
+//        $installedHandlers = CmsConnectorBitrix::getInstance()->getInstalledHandlers();
+//        CSalePaySystemAction::GetList();
+//        if (!is_array($installedHandlers) && sizeof($installedHandlers) == 0)
+//            throw new CMSGateException("Installed handler list OPTION is empty");
+//        if (in_array($paymentSystem->getField("ACTION_FILE"), $installedHandlers)) {
+//            return true;
+//        }
+//        return false;
+//    }
 
     /**
      * По локальному id заказа возвращает wrapper
@@ -139,8 +163,8 @@ class CmsConnectorBitrix extends CmsConnector
         return new CmsConnectorDescriptor(
             "cmsgate-bitrix-lib",
             new VersionDescriptor(
-                "v1.17.1",
-                "2022-06-30"
+                "v1.17.2",
+                "2022-07-14"
             ),
             "Cmsgate Bitrix connector",
             "https://bitbucket.esas.by/projects/CG/repos/cmsgate-bitrix-lib/browse",

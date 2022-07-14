@@ -12,6 +12,9 @@ use Throwable;
 
 class OrderWrapperBitrix extends OrderSafeWrapper
 {
+    /**
+     * @var Order
+     */
     protected $order;
     protected $products;
 
@@ -22,6 +25,38 @@ class OrderWrapperBitrix extends OrderSafeWrapper
     {
         parent::__construct();
         $this->order = $order;
+    }
+
+    const CMSGATE_CURRENT_PAYMENT = 'CMSGATE_CURRENT_PAYMENT';
+
+    public function setCurrentPayment($payment)
+    {
+        $_SESSION[self::CMSGATE_CURRENT_PAYMENT] = $payment;
+    }
+
+    /**
+     * @return Payment
+     * @throws CMSGateException
+     */
+    public function loadCurrentPayment()
+    {
+        /** @var Payment $payment */
+        if (array_key_exists(self::CMSGATE_CURRENT_PAYMENT, $_SESSION) && $_SESSION[self::CMSGATE_CURRENT_PAYMENT] != null)
+            return $_SESSION[self::CMSGATE_CURRENT_PAYMENT];
+        $paymentCollection = $this->order->getPaymentCollection();
+        if (!is_array($paymentCollection) && sizeof($paymentCollection) == 0)
+            throw new CMSGateException("PaymentCollection is empty");
+        if (sizeof($paymentCollection) == 1) {
+            $payment = $paymentCollection->getItemByIndex(0);
+            $_SESSION[self::CMSGATE_CURRENT_PAYMENT] = $payment;
+            return $payment;
+        }
+        foreach ($paymentCollection as $payment) {
+            if (CmsConnectorBitrix::getInstance()->isServedPaymentSystem($payment->getPaySystem())) {
+                $_SESSION[self::CMSGATE_CURRENT_PAYMENT] = $payment;
+                return $payment;
+            }
+        }
     }
 
     /**
@@ -165,22 +200,11 @@ class OrderWrapperBitrix extends OrderSafeWrapper
      */
     public function getExtIdUnsafe()
     {
-        $paymentCollection = $this->order->getPaymentCollection();
-        if (!is_array($paymentCollection) && sizeof($paymentCollection) == 0)
-            throw new CMSGateException("PaymentCollection is empty");
-        $installedPaysystemsIds = CmsConnectorBitrix::getInstance()->getInstalledPaysystemsIds();
-        if (!is_array($installedPaysystemsIds) && sizeof($installedPaysystemsIds) == 0)
-            throw new CMSGateException("InstalledPaysystemsIds is empty");
-        /** @var Payment $payment */
-        foreach ($paymentCollection as $payment) {
-            if (in_array($payment->getPaymentSystemId(), $installedPaysystemsIds)) {
-                $extId = $payment->getField(self::DB_EXT_ID_FIELD);
-                if ($extId == null || $extId == '')
-                    throw new CMSGateException(self::DB_EXT_ID_FIELD . " is not filled");
-                return $extId;
-            }
-        }
-        throw new CMSGateException("No payment was found for order");
+        $payment = $this->loadCurrentPayment();
+        $extId = $payment->getField(self::DB_EXT_ID_FIELD);
+        if ($extId == null || $extId == '')
+            throw new CMSGateException(self::DB_EXT_ID_FIELD . " is not filled");
+        return $extId;
     }
 
     /**
@@ -189,23 +213,10 @@ class OrderWrapperBitrix extends OrderSafeWrapper
      */
     public function saveExtId($extId)
     {
-        $paymentCollection = $this->order->getPaymentCollection();
-        if (!is_array($paymentCollection) && sizeof($paymentCollection) == 0)
-            throw new CMSGateException("PaymentCollection is empty");
-        $installedPaysystemsIds = CmsConnectorBitrix::getInstance()->getInstalledPaysystemsIds();
-        if (!is_array($installedPaysystemsIds) && sizeof($installedPaysystemsIds) == 0)
-            throw new CMSGateException("InstalledPaysystemsIds is empty");
-        $paymentWasFound = false;
-        /** @var Payment $payment */
-        foreach ($paymentCollection as $payment) {
-            if (in_array($payment->getPaymentSystemId(), $installedPaysystemsIds)) {
-                $payment->setField(self::DB_EXT_ID_FIELD, $extId);
-                $this->order->save();
-                $paymentWasFound = true;
-                break;
-            }
-        }
-        if (!$paymentWasFound)
-            throw new CMSGateException("No payment was found for order");
+        $payment = $this->loadCurrentPayment();
+        $payment->setField(self::DB_EXT_ID_FIELD, $extId);
+        $this->order->save();
     }
+
+
 }

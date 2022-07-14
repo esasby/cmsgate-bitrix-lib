@@ -37,6 +37,7 @@ class InstallHelper
     const MODULE_IMAGES_SUB_PATH = "/images/sale/sale_payments/";
     const OPTION_PAYSYSTEM_ID = "PAY_SYSTEM_ID";
     const OPTION_INSTALLED_PAYSYSTEMS_ID = "ADDED_PAY_SYSTEM_ID";
+    const OPTION_INSTALLED_HANDLERS = "ADDED_PAY_SYSTEM_HANDLERS";
 
     private $moduleId;
     private $installSrcDir;
@@ -260,13 +261,18 @@ class InstallHelper
 
         if ($result->isSuccess()) {
             $paySystem->setId($result->getId());
-            //т.к. один плагин может добавлять сразу несколько ПС, то сохраняем идентификаторы через запятую в отдельной настройке (для возможности удаления)
-            $option = Option::get($this->moduleId, self::OPTION_INSTALLED_PAYSYSTEMS_ID);
-            if (!empty($option))
-                $alreadyInstalled = explode(",", $option);
-            $alreadyInstalled[] = $paySystem->getId();
-            Option::set($this->moduleId, self::OPTION_INSTALLED_PAYSYSTEMS_ID, implode(",", $alreadyInstalled));
+            //т.к. один плагин может добавлять сразу несколько ПС, то сохраняем идентификаторы и handler-ы через запятую в отдельной настройке (для возможности удаления)
+            $this->addItemToArrayOption(self::OPTION_INSTALLED_PAYSYSTEMS_ID, $paySystem->getId());
+            $this->addItemToArrayOption(self::OPTION_INSTALLED_HANDLERS, $paySystem->getActionFile());
         }
+    }
+
+    protected function addItemToArrayOption($optionName, $itemToAdd) {
+        $option = Option::get($this->moduleId, $optionName);
+        if (!empty($option))
+            $alreadyInstalled = explode(",", $option);
+        $alreadyInstalled[] = $itemToAdd;
+        Option::set($this->moduleId, $optionName, implode(",", $alreadyInstalled));
     }
 
     protected function getPaysystemType()
