@@ -11,7 +11,9 @@ namespace esas\cmsgate;
 
 use Bitrix\Main\Config\Option;
 use Bitrix\Sale\Order;
+use Bitrix\Sale\Payment;
 use Bitrix\Sale\PaymentCollection;
+use Bitrix\Sale\PaySystem\Service;
 use CSaleOrder;
 use esas\cmsgate\bitrix\InstallHelper;
 use esas\cmsgate\descriptors\CmsConnectorDescriptor;
@@ -42,6 +44,33 @@ class CmsConnectorBitrix extends CmsConnector
     public function createSystemSettingsWrapper()
     {
         return null; // not implemented
+    }
+
+    const CMSGATE_CURRENT_PAYMENT = 'CMSGATE_CURRENT_PAYMENT';
+
+    public function setCurrentPayment($payment)
+    {
+        $_SESSION[self::CMSGATE_CURRENT_PAYMENT] = $payment;
+    }
+
+    /**
+     * @return Payment
+     */
+    public function getCurrentPayment()
+    {
+        if (array_key_exists(self::CMSGATE_CURRENT_PAYMENT, $_SESSION) && $_SESSION[self::CMSGATE_CURRENT_PAYMENT] != null)
+        {
+            return $_SESSION[self::CMSGATE_CURRENT_PAYMENT];
+        }
+        return null;
+    }
+
+    /**
+     * @return Service
+     */
+    public function getCurrentPaymentSystem()
+    {
+        return $this->getCurrentPayment()->getPaySystem();
     }
 
     /**
@@ -163,8 +192,8 @@ class CmsConnectorBitrix extends CmsConnector
         return new CmsConnectorDescriptor(
             "cmsgate-bitrix-lib",
             new VersionDescriptor(
-                "v1.17.2",
-                "2022-07-14"
+                "v1.18.0",
+                "2022-07-18"
             ),
             "Cmsgate Bitrix connector",
             "https://bitbucket.esas.by/projects/CG/repos/cmsgate-bitrix-lib/browse",

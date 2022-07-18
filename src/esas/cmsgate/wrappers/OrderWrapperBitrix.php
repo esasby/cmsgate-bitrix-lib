@@ -3,12 +3,10 @@
 namespace esas\cmsgate\wrappers;
 
 use Bitrix\Sale\Order;
-use Bitrix\Sale\Payment;
 use CSaleOrder;
 use esas\cmsgate\CmsConnectorBitrix;
 use esas\cmsgate\OrderStatus;
 use esas\cmsgate\utils\CMSGateException;
-use Throwable;
 
 class OrderWrapperBitrix extends OrderSafeWrapper
 {
@@ -25,38 +23,6 @@ class OrderWrapperBitrix extends OrderSafeWrapper
     {
         parent::__construct();
         $this->order = $order;
-    }
-
-    const CMSGATE_CURRENT_PAYMENT = 'CMSGATE_CURRENT_PAYMENT';
-
-    public function setCurrentPayment($payment)
-    {
-        $_SESSION[self::CMSGATE_CURRENT_PAYMENT] = $payment;
-    }
-
-    /**
-     * @return Payment
-     * @throws CMSGateException
-     */
-    public function loadCurrentPayment()
-    {
-        /** @var Payment $payment */
-        if (array_key_exists(self::CMSGATE_CURRENT_PAYMENT, $_SESSION) && $_SESSION[self::CMSGATE_CURRENT_PAYMENT] != null)
-            return $_SESSION[self::CMSGATE_CURRENT_PAYMENT];
-        $paymentCollection = $this->order->getPaymentCollection();
-        if (!is_array($paymentCollection) && sizeof($paymentCollection) == 0)
-            throw new CMSGateException("PaymentCollection is empty");
-        if (sizeof($paymentCollection) == 1) {
-            $payment = $paymentCollection->getItemByIndex(0);
-            $_SESSION[self::CMSGATE_CURRENT_PAYMENT] = $payment;
-            return $payment;
-        }
-        foreach ($paymentCollection as $payment) {
-            if (CmsConnectorBitrix::getInstance()->isServedPaymentSystem($payment->getPaySystem())) {
-                $_SESSION[self::CMSGATE_CURRENT_PAYMENT] = $payment;
-                return $payment;
-            }
-        }
     }
 
     /**
@@ -200,7 +166,7 @@ class OrderWrapperBitrix extends OrderSafeWrapper
      */
     public function getExtIdUnsafe()
     {
-        $payment = $this->loadCurrentPayment();
+        $payment = CmsConnectorBitrix::getInstance()->getCurrentPayment();
         $extId = $payment->getField(self::DB_EXT_ID_FIELD);
         if ($extId == null || $extId == '')
             throw new CMSGateException(self::DB_EXT_ID_FIELD . " is not filled");
@@ -213,9 +179,9 @@ class OrderWrapperBitrix extends OrderSafeWrapper
      */
     public function saveExtId($extId)
     {
-        $payment = $this->loadCurrentPayment();
+        $payment = CmsConnectorBitrix::getInstance()->getCurrentPayment();
         $payment->setField(self::DB_EXT_ID_FIELD, $extId);
-        $this->order->save();
+        $payment->save(); //sorry : )
     }
 
 

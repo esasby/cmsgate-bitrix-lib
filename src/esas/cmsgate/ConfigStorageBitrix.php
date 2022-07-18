@@ -8,8 +8,7 @@
 
 namespace esas\cmsgate;
 
-use Bitrix\Sale\PaySystem\Manager;
-use Bitrix\Sale\PaySystem\Service;
+use Bitrix\Sale\BusinessValue;
 use Exception;
 
 class ConfigStorageBitrix extends ConfigStorageCms
@@ -19,16 +18,6 @@ class ConfigStorageBitrix extends ConfigStorageCms
     public function __construct()
     {
         parent::__construct();
-
-        $paySystemManagerResult = Manager::getList([
-            'select' => [
-                'PAY_SYSTEM_ID', "PERSON_TYPE_ID"
-            ],
-            'filter' => [
-                'ACTION_FILE' => CmsConnectorBitrix::getInstance()->getInstalledHandlers(),
-            ],
-        ]);
-        $this->paymentSystems = $paySystemManagerResult->fetch();
     }
 
 
@@ -39,22 +28,9 @@ class ConfigStorageBitrix extends ConfigStorageCms
      */
     public function getConfig($key)
     {
-//        /** @var Service $paymentSystem */
-//        foreach (CmsConnectorBitrix::getInstance()->getServedPaymentSystems() as $paymentSystem) {
-//            $option = \Bitrix\Sale\BusinessValue::get(strtoupper($key),
-//                'PAYSYSTEM_' . $paymentSystem->getField("PAY_SYSTEM_ID"),
-//                $paymentSystem->getField("PERSON_TYPE_ID"));
-//            if ($option != null && $option != '')
-//                break;
-//        }
-        foreach ($this->paymentSystems as $paymentSystem) {
-            $option = \Bitrix\Sale\BusinessValue::get(strtoupper($key),
-                'PAYSYSTEM_' . $paymentSystem["PAY_SYSTEM_ID"],
-                $paymentSystem["PERSON_TYPE_ID"]);
-            if ($option != null && $option != '')
-                break;
-        }
-        return $option;
+        $paymentSystem = CmsConnectorBitrix::getInstance()->getCurrentPaymentSystem();
+        return BusinessValue::get(strtoupper($key), 'PAYSYSTEM_' . $paymentSystem->getField("ID"),
+            $paymentSystem->getField("PERSON_TYPE_ID"));
     }
 
     /**
