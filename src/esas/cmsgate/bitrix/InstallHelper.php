@@ -286,26 +286,40 @@ class InstallHelper
      */
     protected function deletePaysys()
     {
-        $alreadyInstalled = explode(",", Option::get($this->moduleId, self::OPTION_INSTALLED_PAYSYSTEMS_ID));
-        if ($alreadyInstalled == null || sizeof($alreadyInstalled) == 0)
+        $installedHandlers = explode(",", Option::get($this->moduleId, self::OPTION_INSTALLED_HANDLERS));
+        if ($installedHandlers == null || sizeof($installedHandlers) == 0)
             return false;
-        foreach ($alreadyInstalled as $psId) {
-            $paySystemSettings = Manager::GetByID($psId);
-            if (empty($psId) || $psId <= 0 || !$paySystemSettings)
+        foreach ($installedHandlers as $handler) {
+            if (empty($handler) || $handler == '')
                 continue;
-            $order = CSaleOrder::GetList(array(), array("PAY_SYSTEM_ID" => $psId))->Fetch();
-            if ($order["ID"] > 0) {
-                $paySystemSettingsDeleted = array(
-                    "NAME" => $paySystemSettings["NAME"] . " #DELETED",
-                    "ACTIVE" => "N",
-                    "ENTITY_REGISTRY_TYPE" => "DELETED" //любое значение кроме order и invoice
-                );
-                if (!Manager::update($psId, $paySystemSettingsDeleted))
-                    throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_DELETE_EXCEPTION));
-            } else {
-                // verify that there is a payment system to delete
-                if (!Manager::delete($psId))
-                    throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_DELETE_EXCEPTION));
+            $paySystemManagerResult = Manager::getList([
+                'select' => [
+                    '*'
+                ],
+                'filter' => [
+                    'ACTION_FILE' => $handler
+                ],
+            ]);
+
+            $paySystems = $paySystemManagerResult->fetchAll();
+            foreach ($paySystems as $paySystem) {
+                $paySystemId = $paySystem['ID'];
+                if ($paySystemId <= 0)
+                    continue;
+                $order = CSaleOrder::GetList(array(), array("PAY_SYSTEM_ID" => $paySystemId))->Fetch();
+                if ($order["ID"] > 0) { // if any order exists
+                    $paySystemSettingsDeleted = array(
+                        "NAME" => $paySystem["NAME"] . " #DELETED",
+                        "ACTIVE" => "N",
+                        "ENTITY_REGISTRY_TYPE" => "DELETED" //любое значение кроме order и invoice
+                    );
+                    if (!Manager::update($paySystemId, $paySystemSettingsDeleted))
+                        throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_DELETE_EXCEPTION));
+                } else {
+                    // verify that there is a payment system to delete
+                    if (!Manager::delete($paySystemId))
+                        throw new Exception(Registry::getRegistry()->getTranslator()->translate(MessagesBitrix::ERROR_DELETE_EXCEPTION));
+                }
             }
 
         }
