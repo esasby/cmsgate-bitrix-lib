@@ -181,7 +181,7 @@ class OrderWrapperBitrix extends OrderSafeWrapper
     {
         $payment = CmsConnectorBitrix::getInstance()->getCurrentPayment();
         $payment->setField(self::DB_EXT_ID_FIELD, $extId);
-        $payment->save(); //sorry : )
+        $payment->getOrder()->save();
     }
 
 
