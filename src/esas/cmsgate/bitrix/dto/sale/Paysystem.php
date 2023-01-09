@@ -1,10 +1,10 @@
 <?php
 
 
-namespace esas\cmsgate\bitrix;
+namespace esas\cmsgate\bitrix\dto\sale;
 
 
-class CmsgatePaysystem
+class Paysystem
 {
     private $id;
     private $name;
@@ -12,6 +12,7 @@ class CmsgatePaysystem
     private $actionFile;
     private $type;
     private $sort = 100;
+    private $logoPath;
     /**
      * @var boolean
      */
@@ -20,6 +21,10 @@ class CmsgatePaysystem
      * @var boolean
      */
     private $main = false;
+
+    public static function newInstance() {
+        return new Paysystem();
+    }
 
     /**
      * @return mixed
@@ -31,7 +36,7 @@ class CmsgatePaysystem
 
     /**
      * @param mixed $id
-     * @return CmsgatePaysystem
+     * @return Paysystem
      */
     public function setId($id)
     {
@@ -49,7 +54,7 @@ class CmsgatePaysystem
 
     /**
      * @param mixed $name
-     * @return CmsgatePaysystem
+     * @return Paysystem
      */
     public function setName($name)
     {
@@ -67,7 +72,7 @@ class CmsgatePaysystem
 
     /**
      * @param mixed $description
-     * @return CmsgatePaysystem
+     * @return Paysystem
      */
     public function setDescription($description)
     {
@@ -85,7 +90,7 @@ class CmsgatePaysystem
 
     /**
      * @param mixed $actionFile
-     * @return CmsgatePaysystem
+     * @return Paysystem
      */
     public function setActionFile($actionFile)
     {
@@ -103,7 +108,7 @@ class CmsgatePaysystem
 
     /**
      * @param mixed $type
-     * @return CmsgatePaysystem
+     * @return Paysystem
      */
     public function setType($type)
     {
@@ -121,7 +126,7 @@ class CmsgatePaysystem
 
     /**
      * @param mixed $sort
-     * @return CmsgatePaysystem
+     * @return Paysystem
      */
     public function setSort($sort)
     {
@@ -139,9 +144,9 @@ class CmsgatePaysystem
 
     /**
      * @param bool $active
-     * @return CmsgatePaysystem
+     * @return Paysystem
      */
-    public function setActive(bool $active): CmsgatePaysystem
+    public function setActive(bool $active): Paysystem
     {
         $this->active = $active;
         return $this;
@@ -159,11 +164,29 @@ class CmsgatePaysystem
 
     /**
      * @param bool $main
-     * @return CmsgatePaysystem
+     * @return Paysystem
      */
-    public function setMain(bool $main): CmsgatePaysystem
+    public function setMain(bool $main): Paysystem
     {
         $this->main = $main;
+        return $this;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getLogoPath()
+    {
+        return $this->logoPath;
+    }
+
+    /**
+     * @param mixed $logoPath
+     * @return Paysystem
+     */
+    public function setLogoPath($logoPath)
+    {
+        $this->logoPath = $logoPath;
         return $this;
     }
 

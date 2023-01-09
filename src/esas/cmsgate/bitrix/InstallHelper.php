@@ -18,6 +18,7 @@ use Bitrix\Sale\PaySystem\Manager;
 use CFile;
 use CModule;
 use CSaleOrder;
+use esas\cmsgate\bitrix\dto\sale\Paysystem;
 use esas\cmsgate\CmsConnectorBitrix;
 use esas\cmsgate\ConfigFields;
 use esas\cmsgate\messenger\MessagesBitrix;
@@ -49,7 +50,7 @@ class InstallHelper
      */
     protected $managedCModule;
     /**
-     * @var  CmsgatePaysystem[]
+     * @var  Paysystem[]
      */
     protected $installPaySystemsList;
 
@@ -72,7 +73,7 @@ class InstallHelper
 
     public function createMainPaySystem()
     {
-        $mainPaySystem = new CmsgatePaysystem();
+        $mainPaySystem = new Paysystem();
         $mainPaySystem
             ->setName(Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodName()))
             ->setDescription(Registry::getRegistry()->getTranslator()->getConfigFieldDefault(ConfigFields::paymentMethodDetails()))
@@ -88,7 +89,7 @@ class InstallHelper
         $this->addToInstallPaySystemsList($mainPaySystem);
     }
 
-    public function addToInstallPaySystemsList(CmsgatePaysystem $extPaySystem, $addFiles = true)
+    public function addToInstallPaySystemsList(Paysystem $extPaySystem, $addFiles = true)
     {
         $this->installPaySystemsList[] = $extPaySystem;
         if ($addFiles) {
@@ -213,7 +214,7 @@ class InstallHelper
     /**
      * Первоначально тут был просто вызов Manager::Add, но в таком случае не происходит загрузка логотипа, как было в CSalePaySystem::Add
      * Поэтому взят пример кода из \Bitrix\Sale\PaySystem\Manager::createInnerPaySystem
-     * @param CmsgatePaysystem $paySystem
+     * @param Paysystem $paySystem
      * @throws Exception
      */
     public function addPaysys(&$paySystem)

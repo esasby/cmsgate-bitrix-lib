@@ -20,26 +20,7 @@ use esas\cmsgate\utils\htmlbuilder\Elements as element;
 
 class ConfigFormBitrix extends ConfigFormArray
 {
-    private $orderStatuses;
-
-    /**
-     * ConfigFieldsRenderWoo constructor.
-     */
-    public function __construct($formKey, $managedFields)
-    {
-        parent::__construct($formKey, $managedFields);
-        $bitrixStatusList = \Bitrix\Sale\Internals\StatusLangTable::getList(array(
-            'order' => array('STATUS.SORT'=>'ASC'),
-            'filter' => array('STATUS.TYPE'=>'O','LID'=>LANGUAGE_ID),
-            'select' => array('STATUS_ID','NAME'),
-
-        ));
-        while($status=$bitrixStatusList->fetch()) {
-            $statusKey = $status["STATUS_ID"];
-            $statusName = $status["NAME"];
-            $this->orderStatuses[$statusKey] = new ListOption($statusKey, '[' . $statusKey . '] ' .  $statusName);
-        }
-    }
+    protected $orderStatuses;
 
     public function generate()
     {
@@ -104,6 +85,19 @@ class ConfigFormBitrix extends ConfigFormArray
      */
     public function createStatusListOptions()
     {
+        if ($this->orderStatuses == null) {
+            $bitrixStatusList = \Bitrix\Sale\Internals\StatusLangTable::getList(array(
+                'order' => array('STATUS.SORT'=>'ASC'),
+                'filter' => array('STATUS.TYPE'=>'O','LID'=>LANGUAGE_ID),
+                'select' => array('STATUS_ID','NAME'),
+
+            ));
+            while($status=$bitrixStatusList->fetch()) {
+                $statusKey = $status["STATUS_ID"];
+                $statusName = $status["NAME"];
+                $this->orderStatuses[$statusKey] = new ListOption($statusKey, '[' . $statusKey . '] ' .  $statusName);
+            }
+        }
         return $this->orderStatuses;
     }
 
